@@ -397,7 +397,7 @@ def streamlit_app():
         initial_sidebar_state="expanded"
     )
     
-    # 인스타그램 스타일 CSS
+    # 인스타그램 스타일 CSS (반응형 그리드)
     st.markdown("""
     <style>
     .main {
@@ -406,14 +406,48 @@ def streamlit_app():
         min-height: 100vh;
     }
     
+    /* 반응형 그리드 컨테이너 */
+    .items-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 16px;
+        padding: 16px 0;
+    }
+    
+    @media (max-width: 1400px) {
+        .items-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    
+    @media (max-width: 1100px) {
+        .items-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+    
+    @media (max-width: 800px) {
+        .items-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 500px) {
+        .items-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
     /* 인스타그램 스타일 카드 */
     .instagram-card {
         background: white;
         border-radius: 16px;
         overflow: hidden;
         box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        margin-bottom: 24px;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
     
     .instagram-card:hover {
@@ -423,14 +457,15 @@ def streamlit_app():
     
     .card-image {
         width: 100%;
-        height: 280px;
+        height: 200px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 80px;
+        font-size: 60px;
         position: relative;
         overflow: hidden;
+        flex-shrink: 0;
     }
     
     .card-image::before {
@@ -450,36 +485,50 @@ def streamlit_app():
     }
     
     .card-content {
-        padding: 20px;
+        padding: 16px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
     }
     
     .card-title {
-        font-size: 1.3rem;
+        font-size: 1.1rem;
         font-weight: 700;
         color: #1a1a1a;
-        margin: 0 0 8px 0;
+        margin: 0 0 6px 0;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
     
     .card-meta {
         color: #8e8e8e;
-        font-size: 0.9rem;
-        margin-bottom: 12px;
+        font-size: 0.8rem;
+        margin-bottom: 8px;
     }
     
     .card-price {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
         font-weight: 800;
         color: #FF6F0F;
-        margin: 12px 0;
+        margin: 8px 0;
     }
     
     .card-desc {
         color: #262626;
-        line-height: 1.6;
-        margin: 12px 0;
-        padding: 12px;
+        line-height: 1.5;
+        margin: 8px 0;
+        padding: 10px;
         background: #fafafa;
         border-radius: 8px;
+        font-size: 0.85rem;
+        flex: 1;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
     
     .stButton>button {
@@ -487,6 +536,7 @@ def streamlit_app():
         font-weight: 600;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: none;
+        font-size: 0.9rem;
     }
     
     .stButton>button:hover {
@@ -706,7 +756,7 @@ def streamlit_app():
         except Exception as e:
             st.error(f"구매 실패: {e}")
     
-    # 인스타그램 스타일 카드
+    # 인스타그램 스타일 카드 (그리드용)
     def show_item_card(item, show_download=True):
         is_sample = item.get('id', 0) >= 900
         icon = get_item_icon(item.get('id', 0), item['name'])
@@ -715,13 +765,13 @@ def streamlit_app():
         if not desc:
             name = item['name']
             if "로그인" in name or "login" in name.lower():
-                desc = "🔐 자동 로그인 자동화\n\n새올 시스템, 민원 프로그램 등에 자동으로 로그인하는 부품입니다."
+                desc = "🔐 자동 로그인 자동화"
             elif "엑셀" in name or "excel" in name.lower() or "복사" in name:
-                desc = "📊 웹페이지에서 엑셀로 복사하기 자동화\n\n웹페이지의 데이터를 자동으로 복사하여 엑셀 파일로 저장하는 부품입니다."
+                desc = "📊 웹페이지에서 엑셀로 복사하기 자동화"
             elif "민원" in name or "공무원" in name:
-                desc = "🏛️ 민원/공무원 프로그램 자동화\n\n민원 처리나 공무원 업무 프로그램을 자동으로 실행하고 조작하는 부품입니다."
+                desc = "🏛️ 민원/공무원 프로그램 자동화"
             else:
-                desc = f"⚙️ {item['type']} 자동화 부품\n\n자동화 작업을 수행하는 부품입니다."
+                desc = f"⚙️ {item['type']} 자동화 부품"
         
         price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
         
@@ -739,14 +789,14 @@ def streamlit_app():
         card_html = f"""
         <div class="instagram-card">
             <div class="card-image" style="background: {gradient};">
-                <div style="font-size: 100px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">
+                <div style="font-size: 60px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">
                     {icon}
                 </div>
             </div>
             <div class="card-content">
                 <div class="card-title">{item['name']}</div>
                 <div class="card-meta">
-                    👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매
+                    👤 {item['author']} • ⬇️ {item['download_count']}명
                 </div>
                 <div class="card-price">{price_text}</div>
                 <div class="card-desc">
@@ -760,14 +810,12 @@ def streamlit_app():
         # 구매 버튼
         if show_download and not is_sample:
             if st.session_state.logged_in:
-                if st.button("💬 구매하기", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
+                if st.button("💬 구매", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
                     _handle_purchase(item)
             else:
-                st.info("💡 로그인 필요")
+                st.caption("💡 로그인 필요")
         elif is_sample:
-            st.info("📝 샘플 아이템")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
+            st.caption("📝 샘플")
     
     # 마켓플레이스 탭
     with tab_market:
@@ -794,14 +842,14 @@ def streamlit_app():
         elif sort_by == "가격순":
             items.sort(key=lambda x: x['price'])
         
-        # 샘플 데이터
+        # 샘플 데이터 (16개)
         sample_items = [
             {
                 "id": 999,
                 "type": "macro",
                 "name": "새올로그인 자동화",
                 "author": "샘플",
-                "description": "🔐 자동 로그인 자동화\n\n새올 시스템에 자동으로 로그인하는 부품입니다. 아이디와 비밀번호를 입력하면 자동으로 로그인 프로세스를 수행합니다.",
+                "description": "🔐 자동 로그인 자동화\n\n새올 시스템에 자동으로 로그인하는 부품입니다.",
                 "price": 50,
                 "download_count": 123,
                 "created_at": "2024-01-15 10:30:00"
@@ -811,7 +859,7 @@ def streamlit_app():
                 "type": "macro",
                 "name": "웹페이지에서 엑셀로 복사하기 자동화",
                 "author": "샘플",
-                "description": "📊 웹페이지에서 엑셀로 복사하기 자동화\n\n웹페이지의 데이터를 자동으로 복사하여 엑셀 파일로 저장하는 부품입니다. 수작업으로 하던 데이터 입력을 자동화합니다.",
+                "description": "📊 웹페이지에서 엑셀로 복사하기 자동화\n\n웹페이지의 데이터를 자동으로 복사하여 엑셀 파일로 저장합니다.",
                 "price": 80,
                 "download_count": 89,
                 "created_at": "2024-01-14 15:20:00"
@@ -821,10 +869,140 @@ def streamlit_app():
                 "type": "macro",
                 "name": "민원프로그램 모두 로그인 자동화",
                 "author": "샘플",
-                "description": "🏛️ 민원/공무원 프로그램 자동화\n\n민원 처리나 공무원 업무 프로그램을 자동으로 실행하고 조작하는 부품입니다. 반복적인 업무 프로세스를 자동화합니다.",
+                "description": "🏛️ 민원/공무원 프로그램 자동화\n\n민원 처리나 공무원 업무 프로그램을 자동으로 실행합니다.",
                 "price": 100,
                 "download_count": 156,
                 "created_at": "2024-01-13 09:15:00"
+            },
+            {
+                "id": 996,
+                "type": "macro",
+                "name": "엑셀 데이터 자동 입력",
+                "author": "샘플",
+                "description": "📝 엑셀 데이터 자동 입력\n\n엑셀 파일의 데이터를 자동으로 입력하는 부품입니다.",
+                "price": 60,
+                "download_count": 78,
+                "created_at": "2024-01-12 14:00:00"
+            },
+            {
+                "id": 995,
+                "type": "macro",
+                "name": "웹 폼 자동 작성",
+                "author": "샘플",
+                "description": "📋 웹 폼 자동 작성\n\n웹 폼에 자동으로 데이터를 입력하는 부품입니다.",
+                "price": 70,
+                "download_count": 92,
+                "created_at": "2024-01-11 11:30:00"
+            },
+            {
+                "id": 994,
+                "type": "macro",
+                "name": "이미지 자동 캡처",
+                "author": "샘플",
+                "description": "📸 이미지 자동 캡처\n\n화면의 특정 영역을 자동으로 캡처하는 부품입니다.",
+                "price": 55,
+                "download_count": 67,
+                "created_at": "2024-01-10 09:20:00"
+            },
+            {
+                "id": 993,
+                "type": "macro",
+                "name": "파일 자동 다운로드",
+                "author": "샘플",
+                "description": "💾 파일 자동 다운로드\n\n웹에서 파일을 자동으로 다운로드하는 부품입니다.",
+                "price": 65,
+                "download_count": 84,
+                "created_at": "2024-01-09 16:45:00"
+            },
+            {
+                "id": 992,
+                "type": "macro",
+                "name": "텍스트 자동 추출",
+                "author": "샘플",
+                "description": "📄 텍스트 자동 추출\n\n화면에서 텍스트를 자동으로 추출하는 부품입니다.",
+                "price": 45,
+                "download_count": 56,
+                "created_at": "2024-01-08 13:15:00"
+            },
+            {
+                "id": 991,
+                "type": "macro",
+                "name": "버튼 자동 클릭",
+                "author": "샘플",
+                "description": "🖱️ 버튼 자동 클릭\n\n특정 버튼을 자동으로 클릭하는 부품입니다.",
+                "price": 40,
+                "download_count": 112,
+                "created_at": "2024-01-07 10:00:00"
+            },
+            {
+                "id": 990,
+                "type": "macro",
+                "name": "데이터베이스 자동 조회",
+                "author": "샘플",
+                "description": "🗄️ 데이터베이스 자동 조회\n\n데이터베이스에서 정보를 자동으로 조회하는 부품입니다.",
+                "price": 90,
+                "download_count": 45,
+                "created_at": "2024-01-06 15:30:00"
+            },
+            {
+                "id": 989,
+                "type": "macro",
+                "name": "이메일 자동 발송",
+                "author": "샘플",
+                "description": "📧 이메일 자동 발송\n\n이메일을 자동으로 작성하고 발송하는 부품입니다.",
+                "price": 75,
+                "download_count": 38,
+                "created_at": "2024-01-05 12:20:00"
+            },
+            {
+                "id": 988,
+                "type": "macro",
+                "name": "PDF 자동 생성",
+                "author": "샘플",
+                "description": "📑 PDF 자동 생성\n\n데이터를 PDF 파일로 자동 변환하는 부품입니다.",
+                "price": 85,
+                "download_count": 52,
+                "created_at": "2024-01-04 14:10:00"
+            },
+            {
+                "id": 987,
+                "type": "job",
+                "name": "민원 처리 전체 자동화",
+                "author": "샘플",
+                "description": "🏭 민원 처리 전체 자동화\n\n민원 처리 전체 프로세스를 자동화하는 조립품입니다.",
+                "price": 200,
+                "download_count": 34,
+                "created_at": "2024-01-03 11:00:00"
+            },
+            {
+                "id": 986,
+                "type": "job",
+                "name": "보고서 작성 자동화",
+                "author": "샘플",
+                "description": "📊 보고서 작성 자동화\n\n데이터를 수집하여 보고서를 자동으로 작성하는 조립품입니다.",
+                "price": 150,
+                "download_count": 28,
+                "created_at": "2024-01-02 09:30:00"
+            },
+            {
+                "id": 985,
+                "type": "job",
+                "name": "데이터 수집 및 분석",
+                "author": "샘플",
+                "description": "📈 데이터 수집 및 분석\n\n여러 소스에서 데이터를 수집하고 분석하는 조립품입니다.",
+                "price": 180,
+                "download_count": 41,
+                "created_at": "2024-01-01 16:00:00"
+            },
+            {
+                "id": 984,
+                "type": "job",
+                "name": "문서 처리 자동화",
+                "author": "샘플",
+                "description": "📚 문서 처리 자동화\n\n문서를 자동으로 처리하고 분류하는 조립품입니다.",
+                "price": 120,
+                "download_count": 63,
+                "created_at": "2023-12-31 10:15:00"
             }
         ]
         
@@ -832,8 +1010,13 @@ def streamlit_app():
             items = sample_items
             st.info("💡 현재 등록된 아이템이 없습니다. 아래는 샘플 아이템입니다.")
         
-        for item in items:
-            show_item_card(item, show_download=(item.get('id', 0) < 900))
+        # 반응형 그리드 레이아웃으로 표시 (5개씩)
+        for i in range(0, len(items), 5):
+            cols = st.columns(5)
+            for j, col in enumerate(cols):
+                if i + j < len(items):
+                    with col:
+                        show_item_card(items[i + j], show_download=(items[i + j].get('id', 0) < 900))
     
     # 판매하기 탭
     with tab_sell:
