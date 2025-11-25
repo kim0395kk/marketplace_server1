@@ -1020,76 +1020,83 @@ def streamlit_app():
             items = sample_items
             st.info("💡 현재 등록된 아이템이 없습니다. 아래는 샘플 아이템입니다.")
         
-        # Streamlit 컬럼을 사용한 반응형 카드 표시
-        # 5개씩 그룹으로 나누어 표시
-        for i in range(0, len(items), 5):
+        # HTML 그리드를 사용한 반응형 카드 표시 (이미지와 텍스트 함께)
+        grid_html = '<div class="items-grid">'
+        button_keys = []
+        
+        for item in items:
+            is_sample = item.get('id', 0) >= 900
+            icon = get_item_icon(item.get('id', 0), item['name'])
+            
+            desc = item.get('description', '')
+            if not desc:
+                name = item['name']
+                if "로그인" in name or "login" in name.lower():
+                    desc = "🔐 자동 로그인 자동화<br><br>새올 시스템에 자동으로 로그인하는 부품입니다."
+                elif "엑셀" in name or "excel" in name.lower() or "복사" in name:
+                    desc = "📊 웹페이지에서 엑셀로 복사하기 자동화<br><br>웹페이지의 데이터를 자동으로 복사하여 엑셀 파일로 저장합니다."
+                elif "민원" in name or "공무원" in name:
+                    desc = "🏛️ 민원/공무원 프로그램 자동화<br><br>민원 처리나 공무원 업무 프로그램을 자동으로 실행합니다."
+                else:
+                    desc = f"⚙️ {item['type']} 자동화 부품"
+            
+            price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
+            gradients = [
+                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+                "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+            ]
+            gradient = gradients[item.get('id', 0) % len(gradients)]
+            
+            # HTML 이스케이프 처리
+            item_name = item['name'].replace('"', '&quot;').replace("'", "&#39;")
+            item_author = item['author'].replace('"', '&quot;').replace("'", "&#39;")
+            item_desc = desc.replace(chr(10), '<br>').replace('"', '&quot;').replace("'", "&#39;")
+            
+            # 인스타그램 스타일 카드 HTML (이미지와 텍스트 함께)
+            grid_html += f"""
+            <div class="instagram-card" id="card_{item['id']}">
+                <div class="card-image" style="background: {gradient};">
+                    <div style="font-size: 60px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); text-align: center; line-height: 200px;">
+                        {icon}
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">{item_name}</div>
+                    <div class="card-meta">
+                        👤 {item_author} • ⬇️ {item['download_count']}명
+                    </div>
+                    <div class="card-price">{price_text}</div>
+                    <div class="card-desc">
+                        {item_desc}
+                    </div>
+                </div>
+            </div>
+            """
+            button_keys.append((item['id'], is_sample))
+        
+        grid_html += '</div>'
+        st.markdown(grid_html, unsafe_allow_html=True)
+        
+        # Streamlit 버튼을 별도로 배치 (HTML 버튼은 작동하지 않으므로)
+        # 5개씩 그룹으로 나누어 버튼 배치
+        for i in range(0, len(button_keys), 5):
             cols = st.columns(5)
             for j, col in enumerate(cols):
-                if i + j < len(items):
+                if i + j < len(button_keys):
+                    item_id, is_sample = button_keys[i + j]
                     item = items[i + j]
-                    is_sample = item.get('id', 0) >= 900
-                    icon = get_item_icon(item.get('id', 0), item['name'])
-                    
-                    desc = item.get('description', '')
-                    if not desc:
-                        name = item['name']
-                        if "로그인" in name or "login" in name.lower():
-                            desc = "🔐 자동 로그인 자동화"
-                        elif "엑셀" in name or "excel" in name.lower() or "복사" in name:
-                            desc = "📊 웹페이지에서 엑셀로 복사하기 자동화"
-                        elif "민원" in name or "공무원" in name:
-                            desc = "🏛️ 민원/공무원 프로그램 자동화"
-                        else:
-                            desc = f"⚙️ {item['type']} 자동화 부품"
-                    
-                    price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
-                    gradients = [
-                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-                        "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-                        "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-                        "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
-                    ]
-                    gradient = gradients[item.get('id', 0) % len(gradients)]
-                    
                     with col:
-                        # 카드 컨테이너
-                        with st.container():
-                            # 카드 이미지 영역
-                            st.markdown(
-                                f'<div style="background: {gradient}; border-radius: 16px 16px 0 0; padding: 40px 20px; text-align: center; font-size: 50px;">{icon}</div>',
-                                unsafe_allow_html=True
-                            )
-                            
-                            # 카드 내용 영역
-                            st.markdown(
-                                f'<div style="background: white; border-radius: 0 0 16px 16px; padding: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">',
-                                unsafe_allow_html=True
-                            )
-                            
-                            # 제목
-                            st.markdown(f"**{item['name']}**")
-                            
-                            # 메타 정보
-                            st.caption(f"👤 {item['author']} • ⬇️ {item['download_count']}명")
-                            
-                            # 가격
-                            st.markdown(f"### {price_text}")
-                            
-                            # 설명
-                            st.markdown(f"<div style='color: #262626; font-size: 0.85rem; line-height: 1.5;'>{desc.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
-                            
-                            st.markdown('</div>', unsafe_allow_html=True)
-                            
-                            # 구매 버튼
-                            if not is_sample:
-                                if st.session_state.logged_in:
-                                    if st.button("💬 구매", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
-                                        _handle_purchase(item)
-                                else:
-                                    st.caption("💡 로그인 필요")
+                        if not is_sample:
+                            if st.session_state.logged_in:
+                                if st.button("💬 구매", key=f"buy_{item_id}", use_container_width=True, type="primary"):
+                                    _handle_purchase(item)
                             else:
-                                st.caption("📝 샘플")
+                                st.caption("💡 로그인 필요")
+                        else:
+                            st.caption("📝 샘플")
     
     # 판매하기 탭
     with tab_sell:
