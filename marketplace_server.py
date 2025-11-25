@@ -1025,6 +1025,7 @@ def streamlit_app():
         grid_html = '<div class="items-grid">'
         for item in items:
             is_sample = item.get('id', 0) >= 900
+            # 아이콘 가져오기
             icon = get_item_icon(item.get('id', 0), item['name'])
             
             desc = item.get('description', '')
@@ -1050,15 +1051,17 @@ def streamlit_app():
             gradient = gradients[item.get('id', 0) % len(gradients)]
             
             card_id = item['id']
-            item_name = item['name'].replace('"', '&quot;')
-            item_author = item['author'].replace('"', '&quot;')
-            item_desc = desc.replace(chr(10), '<br>').replace('"', '&quot;')
+            item_name = item['name'].replace('"', '&quot;').replace("'", "&#39;")
+            item_author = item['author'].replace('"', '&quot;').replace("'", "&#39;")
+            item_desc = desc.replace(chr(10), '<br>').replace('"', '&quot;').replace("'", "&#39;")
+            # 아이콘도 HTML 이스케이프 처리
+            icon_escaped = icon.replace('"', '&quot;').replace("'", "&#39;")
             
             grid_html += f"""
             <div class="instagram-card" id="card_{card_id}">
                 <div class="card-image" style="background: {gradient};">
-                    <div style="font-size: 60px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">
-                        {icon}
+                    <div style="font-size: 60px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); text-align: center; line-height: 200px;">
+                        {icon_escaped}
                     </div>
                 </div>
                 <div class="card-content">
