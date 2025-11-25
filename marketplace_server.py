@@ -568,7 +568,7 @@ def streamlit_app():
     
     # 사이드바 (로그인/회원가입)
     with st.sidebar:
-        st.markdown("### 🦦 충주씨 마켓플레이스")
+        st.markdown("### 🦦 충주씨 행정자동화 창의력 마켓, 제휴 : kim0395kk@korea.kr")
         
         if st.session_state.logged_in:
             st.success(f"✅ {st.session_state.user_id}님")
@@ -685,7 +685,7 @@ def streamlit_app():
                             st.error(f"회원가입 실패: {e}")
     
     # 메인 페이지 - 마켓플레이스
-    st.markdown("## 🦦 충주씨 자동화 부품 마켓플레이스")
+    st.markdown("## 🦦 충주씨 행정자동화 창의력 마켓, 제휴 : kim0395kk@korea.kr")
     
     # 탭: 마켓플레이스, 판매하기, 내 상점
     tab_market, tab_sell, tab_my_shop = st.tabs(["🏪 마켓플레이스", "📤 판매하기", "🛍️ 내 상점"])
@@ -1020,8 +1020,13 @@ def streamlit_app():
             items = sample_items
             st.info("💡 현재 등록된 아이템이 없습니다. 아래는 샘플 아이템입니다.")
         
-        # CSS Grid를 사용한 반응형 카드 표시
+        # 반응형 그리드로 카드 표시
+        # Streamlit 컬럼을 사용하되, CSS Grid로 감싸서 반응형으로 만듦
+        
+        # 모든 카드를 한 번에 HTML로 렌더링
         grid_html = '<div class="items-grid">'
+        button_keys = []
+        
         for item in items:
             is_sample = item.get('id', 0) >= 900
             icon = get_item_icon(item.get('id', 0), item['name'])
@@ -1053,6 +1058,16 @@ def streamlit_app():
             item_author = item['author'].replace('"', '&quot;').replace("'", "&#39;")
             item_desc = desc.replace(chr(10), '<br>').replace('"', '&quot;').replace("'", "&#39;")
             
+            # 버튼 영역 HTML
+            button_html = ""
+            if not is_sample:
+                if st.session_state.logged_in:
+                    button_html = '<div style="padding: 8px 16px;"><button class="stButton" style="width: 100%;">💬 구매</button></div>'
+                else:
+                    button_html = '<div style="padding: 8px 16px; text-align: center; color: #8e8e8e; font-size: 0.85rem;">💡 로그인 필요</div>'
+            else:
+                button_html = '<div style="padding: 8px 16px; text-align: center; color: #8e8e8e; font-size: 0.85rem;">📝 샘플</div>'
+            
             grid_html += f"""
             <div class="instagram-card" id="card_{item['id']}">
                 <div class="card-image" style="background: {gradient};">
@@ -1067,29 +1082,27 @@ def streamlit_app():
                     </div>
                     <div class="card-price">{price_text}</div>
                     <div class="card-desc">{item_desc}</div>
+                    {button_html}
                 </div>
             </div>
             """
+            button_keys.append((item['id'], is_sample))
+        
         grid_html += '</div>'
         st.markdown(grid_html, unsafe_allow_html=True)
         
-        # 구매 버튼을 Streamlit으로 표시 (반응형)
-        # 화면 크기에 따라 다르게 표시하기 위해 여러 그룹으로 나눔
-        for i in range(0, len(items), 5):
-            cols = st.columns(5)
-            for j, col in enumerate(cols):
-                if i + j < len(items):
-                    item = items[i + j]
-                    is_sample = item.get('id', 0) >= 900
-                    with col:
-                        if not is_sample:
-                            if st.session_state.logged_in:
-                                if st.button("💬 구매", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
-                                    _handle_purchase(item)
-                            else:
-                                st.caption("💡 로그인 필요")
-                        else:
-                            st.caption("📝 샘플")
+        # Streamlit 버튼을 별도로 배치 (HTML 버튼은 작동하지 않으므로)
+        # 각 카드 아래에 버튼 배치
+        for idx, (item_id, is_sample) in enumerate(button_keys):
+            item = items[idx]
+            if not is_sample:
+                if st.session_state.logged_in:
+                    if st.button("💬 구매", key=f"buy_{item_id}", use_container_width=True, type="primary"):
+                        _handle_purchase(item)
+                else:
+                    st.caption("💡 로그인 필요")
+            else:
+                st.caption("📝 샘플")
     
     # 판매하기 탭
     with tab_sell:
