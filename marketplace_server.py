@@ -406,33 +406,44 @@ def streamlit_app():
         min-height: 100vh;
     }
     
-    /* 반응형 그리드 컨테이너 */
+    /* 반응형 그리드 컨테이너 - 유동적 배치 */
     .items-grid {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 16px;
         padding: 16px 0;
     }
     
-    @media (max-width: 1400px) {
+    /* 최대 5개까지 표시 */
+    @media (min-width: 1200px) {
+        .items-grid {
+            grid-template-columns: repeat(5, 1fr);
+        }
+    }
+    
+    /* 중간 크기: 4개 */
+    @media (min-width: 960px) and (max-width: 1199px) {
         .items-grid {
             grid-template-columns: repeat(4, 1fr);
         }
     }
     
-    @media (max-width: 1100px) {
+    /* 작은 화면: 3개 */
+    @media (min-width: 720px) and (max-width: 959px) {
         .items-grid {
             grid-template-columns: repeat(3, 1fr);
         }
     }
     
-    @media (max-width: 800px) {
+    /* 더 작은 화면: 2개 */
+    @media (min-width: 480px) and (max-width: 719px) {
         .items-grid {
             grid-template-columns: repeat(2, 1fr);
         }
     }
     
-    @media (max-width: 500px) {
+    /* 모바일: 1개 */
+    @media (max-width: 479px) {
         .items-grid {
             grid-template-columns: 1fr;
         }
@@ -1010,13 +1021,75 @@ def streamlit_app():
             items = sample_items
             st.info("💡 현재 등록된 아이템이 없습니다. 아래는 샘플 아이템입니다.")
         
-        # 반응형 그리드 레이아웃으로 표시 (5개씩)
+        # 반응형 그리드 레이아웃으로 표시 (CSS Grid 사용)
+        grid_html = '<div class="items-grid">'
+        for item in items:
+            is_sample = item.get('id', 0) >= 900
+            icon = get_item_icon(item.get('id', 0), item['name'])
+            
+            desc = item.get('description', '')
+            if not desc:
+                name = item['name']
+                if "로그인" in name or "login" in name.lower():
+                    desc = "🔐 자동 로그인 자동화"
+                elif "엑셀" in name or "excel" in name.lower() or "복사" in name:
+                    desc = "📊 웹페이지에서 엑셀로 복사하기 자동화"
+                elif "민원" in name or "공무원" in name:
+                    desc = "🏛️ 민원/공무원 프로그램 자동화"
+                else:
+                    desc = f"⚙️ {item['type']} 자동화 부품"
+            
+            price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
+            gradients = [
+                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+                "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+            ]
+            gradient = gradients[item.get('id', 0) % len(gradients)]
+            
+            card_id = item['id']
+            item_name = item['name'].replace('"', '&quot;')
+            item_author = item['author'].replace('"', '&quot;')
+            item_desc = desc.replace(chr(10), '<br>').replace('"', '&quot;')
+            
+            grid_html += f"""
+            <div class="instagram-card" id="card_{card_id}">
+                <div class="card-image" style="background: {gradient};">
+                    <div style="font-size: 60px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">
+                        {icon}
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">{item_name}</div>
+                    <div class="card-meta">
+                        👤 {item_author} • ⬇️ {item['download_count']}명
+                    </div>
+                    <div class="card-price">{price_text}</div>
+                    <div class="card-desc">{item_desc}</div>
+                </div>
+            </div>
+            """
+        grid_html += '</div>'
+        st.markdown(grid_html, unsafe_allow_html=True)
+        
+        # 구매 버튼을 Streamlit으로 표시 (반응형 그리드)
         for i in range(0, len(items), 5):
             cols = st.columns(5)
             for j, col in enumerate(cols):
                 if i + j < len(items):
+                    item = items[i + j]
+                    is_sample = item.get('id', 0) >= 900
                     with col:
-                        show_item_card(items[i + j], show_download=(items[i + j].get('id', 0) < 900))
+                        if not is_sample:
+                            if st.session_state.logged_in:
+                                if st.button("💬 구매", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
+                                    _handle_purchase(item)
+                            else:
+                                st.caption("💡 로그인 필요")
+                        else:
+                            st.caption("📝 샘플")
     
     # 판매하기 탭
     with tab_sell:
