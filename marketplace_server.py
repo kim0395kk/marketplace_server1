@@ -511,7 +511,7 @@ def streamlit_app():
     
     # 사이드바 (로그인/회원가입)
     with st.sidebar:
-        st.markdown("### 🏛️ 충주시 마켓플레이스")
+        st.markdown("### 🦦 충주씨 마켓플레이스")
         
         if st.session_state.logged_in:
             st.success(f"✅ {st.session_state.user_id}님")
@@ -628,7 +628,7 @@ def streamlit_app():
                             st.error(f"회원가입 실패: {e}")
     
     # 메인 페이지 - 마켓플레이스
-    st.markdown("## 🏛️ 충주시 자동화 부품 마켓플레이스")
+    st.markdown("## 🦦 충주씨 자동화 부품 마켓플레이스")
     
     # 탭: 마켓플레이스, 판매하기, 내 상점
     tab_market, tab_sell, tab_my_shop = st.tabs(["🏪 마켓플레이스", "📤 판매하기", "🛍️ 내 상점"])
@@ -694,12 +694,13 @@ def streamlit_app():
         html = f'<div class="minecraft-sculpture">'
         for block in selected["blocks"]:
             depth = block["size"] / 2
+            # CSS 변수 대신 직접 스타일 적용
             html += f'''
             <div class="mc-block" style="left: {block["x"]}px; top: {block["y"]}px; width: {block["size"]}px; height: {block["size"]}px;">
-                <div class="block-cube" style="--depth: {depth}px; --face-color: {block["color"]}; --top-color: {block["top"]}; --right-color: {block["right"]};">
-                    <div class="cube-face cube-front"></div>
-                    <div class="cube-face cube-top"></div>
-                    <div class="cube-face cube-right"></div>
+                <div class="block-cube">
+                    <div class="cube-face cube-front" style="background: {block["color"]}; transform: translateZ({depth}px);"></div>
+                    <div class="cube-face cube-top" style="background: {block["top"]}; transform: rotateX(90deg) translateZ({depth}px);"></div>
+                    <div class="cube-face cube-right" style="background: {block["right"]}; transform: rotateY(90deg) translateZ({depth}px);"></div>
                 </div>
             </div>
             '''
@@ -762,40 +763,51 @@ def streamlit_app():
         
         price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
         
-        # 당근마켓 스타일 카드 (Streamlit 네이티브)
-        with st.container():
-            # 조형물과 정보를 나란히 배치
-            col_left, col_right = st.columns([200, 1])
-            
-            with col_left:
-                # 조형물 표시
-                st.markdown(f'<div style="text-align: center; margin-bottom: 10px;">{sculpture_html}</div>', unsafe_allow_html=True)
-                st.caption(f"🏛️ {sculpture_name}")
-            
-            with col_right:
-                # 제목과 가격
-                col_title, col_price = st.columns([3, 1])
-                with col_title:
-                    st.markdown(f"### {item['name']}")
-                    st.caption(f"👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매")
-                with col_price:
-                    st.markdown(f"## {price_text}")
-                
-                # 설명
-                with st.expander("📝 상세 설명", expanded=True):
-                    st.markdown(desc)
-                
-                # 구매 버튼
-                if show_download and not is_sample:
-                    if st.session_state.logged_in:
-                        if st.button("💬 구매하기", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
-                            _handle_purchase(item)
-                    else:
-                        st.info("💡 로그인 필요")
-                elif is_sample:
-                    st.info("📝 샘플 아이템")
+        # 당근마켓 스타일 카드 (간단한 방식)
+        st.markdown("---")
         
-        st.divider()
+        col_img, col_content = st.columns([200, 1])
+        
+        with col_img:
+            # 조형물 표시 (HTML 직접 렌더링)
+            st.markdown(f"""
+            <div style="text-align: center; padding: 20px; background: #f9fafb; border-radius: 12px; margin-bottom: 10px;">
+                {sculpture_html}
+                <div style="margin-top: 10px; font-size: 0.9rem; color: #6b7280; font-weight: 600;">
+                    🏛️ {sculpture_name}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_content:
+            # 제목과 가격
+            col_title, col_price = st.columns([3, 1])
+            with col_title:
+                st.markdown(f"### {item['name']}")
+                st.caption(f"👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매")
+            with col_price:
+                st.markdown(f"## {price_text}")
+            
+            # 설명
+            st.markdown(f"""
+            <div style="background: #f9fafb; padding: 14px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #FF6F0F;">
+                <div style="color: #374151; line-height: 1.7; white-space: pre-line;">
+                    {desc.replace(chr(10), '<br>')}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 구매 버튼
+            if show_download and not is_sample:
+                if st.session_state.logged_in:
+                    if st.button("💬 구매하기", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
+                        _handle_purchase(item)
+                else:
+                    st.info("💡 로그인 필요")
+            elif is_sample:
+                st.info("📝 샘플 아이템")
+        
+        st.markdown("---")
     
     # 마켓플레이스 탭
     with tab_market:
