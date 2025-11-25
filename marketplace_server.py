@@ -405,119 +405,7 @@ def streamlit_app():
         background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
     }
     
-    /* 마인크래프트 3D 블럭 조형물 */
-    .minecraft-sculpture {
-        width: 140px;
-        height: 140px;
-        position: relative;
-        transform-style: preserve-3d;
-        transform: rotateX(-20deg) rotateY(25deg);
-        margin: 0 auto;
-    }
     
-    .minecraft-block {
-        position: absolute;
-        width: 40px;
-        height: 40px;
-        transform-style: preserve-3d;
-    }
-    
-    /* 블럭 면들 */
-    .block-face {
-        position: absolute;
-        width: 40px;
-        height: 40px;
-        border: 2px solid rgba(0,0,0,0.3);
-        box-sizing: border-box;
-    }
-    
-    /* 앞면 */
-    .block-front {
-        background: var(--block-color);
-        transform: translateZ(20px);
-        box-shadow: inset 0 0 10px rgba(255,255,255,0.3);
-    }
-    
-    /* 윗면 */
-    .block-top {
-        background: var(--block-color-light);
-        transform: rotateX(90deg) translateZ(20px);
-        box-shadow: inset 0 0 10px rgba(255,255,255,0.5);
-    }
-    
-    /* 오른쪽 면 */
-    .block-right {
-        background: var(--block-color-dark);
-        transform: rotateY(90deg) translateZ(20px);
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
-    }
-    
-    /* 카드 스타일 */
-    .item-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border: 2px solid #8B7355;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .item-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #8B7355, #A0826D, #8B7355);
-    }
-    
-    .item-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-        transition: all 0.3s;
-    }
-    
-    .item-title {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #2C2C2C;
-        margin: 0 0 8px 0;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-    }
-    
-    .item-price {
-        font-size: 1.4rem;
-        font-weight: 800;
-        color: #FF6F0F;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-    }
-    
-    .item-description-box {
-        background: linear-gradient(135deg, #FFF8E7 0%, #FFE5B4 100%);
-        padding: 14px;
-        border-radius: 8px;
-        margin-top: 12px;
-        border-left: 5px solid #FF6F0F;
-        border-top: 2px solid #FFD700;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .stButton>button {
-        border-radius: 8px;
-        font-weight: 700;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        border: 2px solid rgba(0,0,0,0.1);
-    }
-    
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-    }
-    </style>
-    """, unsafe_allow_html=True)
     
     # 세션 상태 초기화
     if "logged_in" not in st.session_state:
@@ -1097,6 +985,7 @@ if __name__ == "__main__":
             if FASTAPI_AVAILABLE and app:
                 print("🚀 FastAPI 서버도 자동으로 시작됩니다: http://localhost:8000")
         streamlit_app()
+
 
 
 
