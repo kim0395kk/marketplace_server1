@@ -183,7 +183,7 @@ if FASTAPI_AVAILABLE and app:
         # 사용자 생성
         password_hash = hash_password(request.password)
         c.execute("INSERT INTO users (user_id, password_hash, points) VALUES (?, ?, ?)",
-                  (request.user_id, password_hash, 100))
+                  (request.user_id, password_hash, 100))  # 신규 사용자에게 100포인트 지급
         
         conn.commit()
         conn.close()
@@ -196,6 +196,7 @@ if FASTAPI_AVAILABLE and app:
         conn = get_db()
         c = conn.cursor()
         
+        # 사용자 확인
         password_hash = hash_password(request.password)
         c.execute("SELECT user_id, points FROM users WHERE user_id = ? AND password_hash = ?", 
                   (request.user_id, password_hash))
@@ -209,7 +210,10 @@ if FASTAPI_AVAILABLE and app:
         token = secrets.token_urlsafe(32)
         expires_at = datetime.now().replace(hour=23, minute=59, second=59).isoformat()
         
+        # 기존 토큰 삭제
         c.execute("DELETE FROM tokens WHERE user_id = ?", (request.user_id,))
+        
+        # 새 토큰 저장
         c.execute("INSERT INTO tokens (token, user_id, expires_at) VALUES (?, ?, ?)",
                   (token, request.user_id, expires_at))
         
@@ -277,11 +281,13 @@ if FASTAPI_AVAILABLE and app:
         if not user_id:
             raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
         
+        # ZIP 데이터 디코딩
         try:
             zip_data = base64.b64decode(request.zip_data)
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"ZIP 데이터 디코딩 실패: {e}")
         
+        # 데이터베이스에 저장
         conn = get_db()
         c = conn.cursor()
         c.execute("""
@@ -297,6 +303,7 @@ if FASTAPI_AVAILABLE and app:
             json.dumps(request.metadata, ensure_ascii=False)
         ))
         
+        # 판매자에게 포인트 지급 (판매 가격의 10% 보너스)
         bonus = int(request.metadata.get("price", 0) * 0.1)
         if bonus > 0:
             current_points = get_user_points(user_id)
@@ -328,6 +335,7 @@ if FASTAPI_AVAILABLE and app:
         conn = get_db()
         c = conn.cursor()
         
+        # 아이템 조회
         c.execute("SELECT price, zip_data, author FROM items WHERE id = ?", (request.item_id,))
         item = c.fetchone()
         
@@ -339,26 +347,35 @@ if FASTAPI_AVAILABLE and app:
         zip_data = item[1]
         author = item[2]
         
+        # 본인이 올린 아이템은 무료
         if author == user_id:
             price = 0
         
+        # 포인트 확인
         current_points = get_user_points(user_id)
         if current_points < price:
             conn.close()
             raise HTTPException(status_code=400, detail=f"포인트가 부족합니다. (필요: {price}P, 보유: {current_points}P)")
         
+        # 포인트 차감
         if price > 0:
             update_user_points(user_id, current_points - price)
+            
+            # 판매자에게 포인트 지급
             seller_points = get_user_points(author)
             update_user_points(author, seller_points + price)
+            
+            # 거래 기록
             c.execute("INSERT INTO transactions (buyer_id, item_id, price) VALUES (?, ?, ?)",
                       (user_id, request.item_id, price))
         
+        # 다운로드 횟수 증가
         c.execute("UPDATE items SET download_count = download_count + 1 WHERE id = ?", (request.item_id,))
         
         conn.commit()
         conn.close()
         
+        # ZIP 데이터 base64 인코딩
         zip_base64 = base64.b64encode(zip_data).decode("utf-8")
         
         return {
@@ -372,7 +389,7 @@ if FASTAPI_AVAILABLE and app:
 # ==========================================
 
 def streamlit_app():
-    """Streamlit 마켓플레이스 (마인크래프트 조형물 스타일)"""
+    """Streamlit 마켓플레이스 (인스타그램 + 깃허브 스타일)"""
     st.set_page_config(
         page_title="마켓플레이스",
         page_icon="🛒",
@@ -380,23 +397,62 @@ def streamlit_app():
         initial_sidebar_state="expanded"
     )
     
-    # 마인크래프트 세계 문화 유산 조형물 스타일 CSS
+    # 당근마켓 + 마인크래프트 조형물 스타일 CSS
     st.markdown("""
     <style>
     .main {
         padding-top: 1rem;
-        background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #F0E68C 100%);
+        background: #f8f9fa;
     }
     
-    /* 마인크래프트 조형물 컨테이너 */
-    .heritage-sculpture {
-        width: 180px;
-        height: 200px;
+    /* 당근마켓 스타일 카드 */
+    .daangn-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
+        transition: all 0.3s ease;
+    }
+    
+    .daangn-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+    
+    .daangn-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 8px 0;
+    }
+    
+    .daangn-price {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #FF6F0F;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .daangn-desc {
+        background: #f9fafb;
+        padding: 14px;
+        border-radius: 8px;
+        margin-top: 12px;
+        border-left: 4px solid #FF6F0F;
+        color: #374151;
+        line-height: 1.7;
+    }
+    
+    /* 마인크래프트 조형물 */
+    .minecraft-sculpture {
+        width: 160px;
+        height: 180px;
         position: relative;
-        transform-style: preserve-3d;
-        transform: rotateX(-15deg) rotateY(20deg);
         margin: 0 auto;
-        perspective: 1000px;
+        transform-style: preserve-3d;
+        transform: rotateX(-20deg) rotateY(25deg);
     }
     
     .mc-block {
@@ -413,110 +469,31 @@ def streamlit_app():
     
     .cube-face {
         position: absolute;
-        border: 1px solid rgba(0,0,0,0.4);
+        border: 2px solid rgba(0,0,0,0.3);
         box-sizing: border-box;
     }
     
     .cube-front {
         background: var(--face-color);
         transform: translateZ(var(--depth));
-        box-shadow: inset 0 0 8px rgba(255,255,255,0.3);
+        box-shadow: inset 0 0 10px rgba(255,255,255,0.3);
     }
     
     .cube-top {
         background: var(--top-color);
         transform: rotateX(90deg) translateZ(var(--depth));
-        box-shadow: inset 0 0 8px rgba(255,255,255,0.5);
+        box-shadow: inset 0 0 10px rgba(255,255,255,0.5);
     }
     
     .cube-right {
         background: var(--right-color);
         transform: rotateY(90deg) translateZ(var(--depth));
-        box-shadow: inset 0 0 8px rgba(0,0,0,0.3);
-    }
-    
-    .cube-back {
-        background: var(--face-color);
-        transform: translateZ(calc(-1 * var(--depth)));
-    }
-    
-    .cube-left {
-        background: var(--right-color);
-        transform: rotateY(-90deg) translateZ(var(--depth));
-    }
-    
-    .cube-bottom {
-        background: var(--face-color);
-        transform: rotateX(-90deg) translateZ(var(--depth));
-    }
-    
-    /* 카드 스타일 */
-    .item-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
-        border: 3px solid #8B7355;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .item-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 6px;
-        background: linear-gradient(90deg, #8B7355, #A0826D, #D4A574, #A0826D, #8B7355);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    
-    .item-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 12px 32px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.12);
-        transition: all 0.3s ease;
-    }
-    
-    .item-title {
-        font-size: 1.3rem;
-        font-weight: 800;
-        color: #2C2C2C;
-        margin: 0 0 10px 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.15);
-        letter-spacing: -0.5px;
-    }
-    
-    .item-price {
-        font-size: 1.6rem;
-        font-weight: 900;
-        color: #FF6F0F;
-        text-shadow: 2px 2px 6px rgba(0,0,0,0.25);
-        letter-spacing: -1px;
-    }
-    
-    .item-description-box {
-        background: linear-gradient(135deg, #FFF8E7 0%, #FFE5B4 50%, #FFF8E7 100%);
-        padding: 16px;
-        border-radius: 10px;
-        margin-top: 14px;
-        border-left: 6px solid #FF6F0F;
-        border-top: 3px solid #FFD700;
-        box-shadow: inset 0 2px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
     }
     
     .stButton>button {
-        border-radius: 10px;
-        font-weight: 700;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-        border: 2px solid rgba(0,0,0,0.15);
-        font-size: 1rem;
-    }
-    
-    .stButton>button:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+        border-radius: 8px;
+        font-weight: 600;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -528,6 +505,8 @@ def streamlit_app():
         st.session_state.user_id = None
     if "user_token" not in st.session_state:
         st.session_state.user_token = None
+    if "current_tab" not in st.session_state:
+        st.session_state.current_tab = "마켓플레이스"
     
     # 사이드바 (로그인/회원가입)
     with st.sidebar:
@@ -633,7 +612,6 @@ def streamlit_app():
                                     conn.commit()
                                     conn.close()
                                     st.success("회원가입 성공! 100포인트 지급")
-                                    st.rerun()
                             else:
                                 import requests
                                 response = requests.post(
@@ -648,7 +626,7 @@ def streamlit_app():
                         except Exception as e:
                             st.error(f"회원가입 실패: {e}")
     
-    # 메인 페이지
+    # 메인 페이지 - 마켓플레이스 (인스타그램 + 깃허브 스타일)
     st.title("🛒 마켓플레이스")
     
     # 탭: 마켓플레이스, 판매하기, 내 상점
@@ -678,67 +656,41 @@ def streamlit_app():
         conn.close()
         return items
     
-    # 세계 문화 유산/위인 조형물 생성 함수
+    # 세계 문화 유산 조형물 생성
     def create_heritage_sculpture(item_id):
         """아이템 ID에 따라 다른 조형물 생성"""
         sculptures = {
-            0: {  # 석가탑
-                "name": "석가탑",
-                "blocks": [
-                    {"x": 60, "y": 140, "z": 60, "size": 20, "color": "#D4A574", "top": "#E8C9A0", "right": "#B8956A"},
-                    {"x": 50, "y": 120, "z": 50, "size": 30, "color": "#C9A574", "top": "#D4B584", "right": "#A8956A"},
-                    {"x": 40, "y": 100, "z": 40, "size": 40, "color": "#B8956A", "top": "#C9A574", "right": "#987A5A"},
-                    {"x": 50, "y": 80, "z": 50, "size": 30, "color": "#C9A574", "top": "#D4B584", "right": "#A8956A"},
-                    {"x": 60, "y": 60, "z": 60, "size": 20, "color": "#D4A574", "top": "#E8C9A0", "right": "#B8956A"},
-                    {"x": 70, "y": 40, "z": 70, "size": 10, "color": "#E8C9A0", "top": "#F0D4B0", "right": "#D4A574"},
-                ]
-            },
-            1: {  # 경복궁
-                "name": "경복궁",
-                "blocks": [
-                    {"x": 30, "y": 120, "z": 30, "size": 40, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
-                    {"x": 35, "y": 100, "z": 35, "size": 30, "color": "#A0522D", "top": "#B8653D", "right": "#8B4513"},
-                    {"x": 40, "y": 80, "z": 40, "size": 20, "color": "#B8653D", "top": "#C8754D", "right": "#A0522D"},
-                    {"x": 20, "y": 140, "z": 20, "size": 20, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
-                    {"x": 100, "y": 140, "z": 20, "size": 20, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
-                    {"x": 20, "y": 140, "z": 100, "size": 20, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
-                    {"x": 100, "y": 140, "z": 100, "size": 20, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
-                ]
-            },
-            2: {  # 세종대왕상
-                "name": "세종대왕",
-                "blocks": [
-                    {"x": 50, "y": 160, "z": 50, "size": 20, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
-                    {"x": 55, "y": 140, "z": 55, "size": 10, "color": "#D4A574", "top": "#E8C9A0", "right": "#B8956A"},
-                    {"x": 60, "y": 120, "z": 60, "size": 8, "color": "#F5DEB3", "top": "#FFF8DC", "right": "#E8C9A0"},
-                    {"x": 50, "y": 100, "z": 50, "size": 6, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
-                ]
-            },
-            3: {  # 에펠탑
-                "name": "에펠탑",
-                "blocks": [
-                    {"x": 70, "y": 180, "z": 70, "size": 10, "color": "#C0C0C0", "top": "#D3D3D3", "right": "#A0A0A0"},
-                    {"x": 65, "y": 160, "z": 65, "size": 20, "color": "#A0A0A0", "top": "#B0B0B0", "right": "#808080"},
-                    {"x": 60, "y": 140, "z": 60, "size": 30, "color": "#808080", "top": "#909090", "right": "#606060"},
-                    {"x": 55, "y": 120, "z": 55, "size": 40, "color": "#606060", "top": "#707070", "right": "#404040"},
-                ]
-            },
-            4: {  # 자유의 여신상
-                "name": "자유의 여신상",
-                "blocks": [
-                    {"x": 60, "y": 180, "z": 60, "size": 20, "color": "#8B7355", "top": "#A0826D", "right": "#6B5A4A"},
-                    {"x": 65, "y": 160, "z": 65, "size": 10, "color": "#A0826D", "top": "#B8956A", "right": "#8B7355"},
-                    {"x": 70, "y": 140, "z": 70, "size": 8, "color": "#B8956A", "top": "#C9A574", "right": "#A0826D"},
-                    {"x": 68, "y": 120, "z": 68, "size": 6, "color": "#C9A574", "top": "#D4B584", "right": "#B8956A"},
-                    {"x": 50, "y": 100, "z": 50, "size": 4, "color": "#FFD700", "top": "#FFE44D", "right": "#CCAA00"},
-                ]
-            }
+            0: {"name": "석가탑", "blocks": [
+                {"x": 60, "y": 140, "z": 60, "size": 20, "color": "#D4A574", "top": "#E8C9A0", "right": "#B8956A"},
+                {"x": 50, "y": 120, "z": 50, "size": 30, "color": "#C9A574", "top": "#D4B584", "right": "#A8956A"},
+                {"x": 40, "y": 100, "z": 40, "size": 40, "color": "#B8956A", "top": "#C9A574", "right": "#987A5A"},
+                {"x": 50, "y": 80, "z": 50, "size": 30, "color": "#C9A574", "top": "#D4B584", "right": "#A8956A"},
+                {"x": 60, "y": 60, "z": 60, "size": 20, "color": "#D4A574", "top": "#E8C9A0", "right": "#B8956A"},
+            ]},
+            1: {"name": "경복궁", "blocks": [
+                {"x": 30, "y": 120, "z": 30, "size": 40, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
+                {"x": 35, "y": 100, "z": 35, "size": 30, "color": "#A0522D", "top": "#B8653D", "right": "#8B4513"},
+                {"x": 40, "y": 80, "z": 40, "size": 20, "color": "#B8653D", "top": "#C8754D", "right": "#A0522D"},
+            ]},
+            2: {"name": "세종대왕", "blocks": [
+                {"x": 50, "y": 160, "z": 50, "size": 20, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
+                {"x": 55, "y": 140, "z": 55, "size": 10, "color": "#D4A574", "top": "#E8C9A0", "right": "#B8956A"},
+                {"x": 60, "y": 120, "z": 60, "size": 8, "color": "#F5DEB3", "top": "#FFF8DC", "right": "#E8C9A0"},
+            ]},
+            3: {"name": "에펠탑", "blocks": [
+                {"x": 70, "y": 180, "z": 70, "size": 10, "color": "#C0C0C0", "top": "#D3D3D3", "right": "#A0A0A0"},
+                {"x": 65, "y": 160, "z": 65, "size": 20, "color": "#A0A0A0", "top": "#B0B0B0", "right": "#808080"},
+                {"x": 60, "y": 140, "z": 60, "size": 30, "color": "#808080", "top": "#909090", "right": "#606060"},
+            ]},
+            4: {"name": "자유의 여신상", "blocks": [
+                {"x": 60, "y": 180, "z": 60, "size": 20, "color": "#8B7355", "top": "#A0826D", "right": "#6B5A4A"},
+                {"x": 65, "y": 160, "z": 65, "size": 10, "color": "#A0826D", "top": "#B8956A", "right": "#8B7355"},
+                {"x": 70, "y": 140, "z": 70, "size": 8, "color": "#B8956A", "top": "#C9A574", "right": "#A0826D"},
+            ]}
         }
         
-        # 아이템 ID에 따라 조형물 선택
         selected = sculptures.get(item_id % len(sculptures), sculptures[0])
-        
-        html = f'<div class="heritage-sculpture">'
+        html = f'<div class="minecraft-sculpture">'
         for block in selected["blocks"]:
             depth = block["size"] / 2
             html += f'''
@@ -747,9 +699,6 @@ def streamlit_app():
                     <div class="cube-face cube-front"></div>
                     <div class="cube-face cube-top"></div>
                     <div class="cube-face cube-right"></div>
-                    <div class="cube-face cube-back"></div>
-                    <div class="cube-face cube-left"></div>
-                    <div class="cube-face cube-bottom"></div>
                 </div>
             </div>
             '''
@@ -758,20 +707,16 @@ def streamlit_app():
     
     # 구매 처리 함수
     def _handle_purchase(item):
-        """구매 처리"""
         try:
             if IS_STREAMLIT_CLOUD or not FASTAPI_AVAILABLE:
                 user_id = st.session_state.user_id
                 conn = get_db()
                 c = conn.cursor()
-                
                 c.execute("SELECT price, zip_data, author FROM items WHERE id = ?", (item['id'],))
                 item_data = c.fetchone()
-                
                 if item_data:
                     price = item_data[0] if item_data[2] != user_id else 0
                     zip_data = item_data[1]
-                    
                     current_points = get_user_points(user_id)
                     if current_points < price:
                         st.error(f"포인트가 부족합니다. (필요: {price}P, 보유: {current_points}P)")
@@ -782,9 +727,7 @@ def streamlit_app():
                             update_user_points(item_data[2], seller_points + price)
                             c.execute("INSERT INTO transactions (buyer_id, item_id, price) VALUES (?, ?, ?)",
                                       (user_id, item['id'], price))
-                        
                         c.execute("UPDATE items SET download_count = download_count + 1 WHERE id = ?", (item['id'],))
-                        
                         st.download_button(
                             label="📥 다운로드",
                             data=zip_data,
@@ -793,63 +736,54 @@ def streamlit_app():
                             key=f"dl_{item['id']}"
                         )
                         st.success("✅ 구매 완료!")
-                        
                         conn.commit()
                         conn.close()
                         st.rerun()
         except Exception as e:
             st.error(f"구매 실패: {e}")
     
-    # 마인크래프트 조형물 스타일 카드
+    # 당근마켓 스타일 카드
     def show_item_card(item, show_download=True):
-        """마인크래프트 세계 문화 유산 조형물 스타일 카드"""
-        
         is_sample = item.get('id', 0) >= 900
-        
-        # 조형물 생성
         sculpture_html, sculpture_name = create_heritage_sculpture(item.get('id', 0))
         
-        # 설명 생성
         desc = item.get('description', '')
         if not desc:
             name = item['name']
             if "로그인" in name or "login" in name.lower():
-                desc = "🔐 자동 로그인 자동화\n\n새올 시스템, 민원 프로그램 등에 자동으로 로그인하는 부품입니다. 반복적인 로그인 작업을 자동화하여 업무 효율을 높입니다."
+                desc = "🔐 자동 로그인 자동화\n\n새올 시스템, 민원 프로그램 등에 자동으로 로그인하는 부품입니다."
             elif "엑셀" in name or "excel" in name.lower() or "복사" in name:
-                desc = "📊 웹페이지에서 엑셀로 복사하기 자동화\n\n웹페이지의 데이터를 자동으로 복사하여 엑셀 파일로 저장하는 부품입니다. 수작업으로 하던 데이터 입력을 자동화합니다."
-            elif "민원" in name or "공무원" in name or "프로그램" in name:
-                desc = "🏛️ 민원/공무원 프로그램 자동화\n\n민원 처리나 공무원 업무 프로그램을 자동으로 실행하고 조작하는 부품입니다. 반복적인 업무 프로세스를 자동화합니다."
+                desc = "📊 웹페이지에서 엑셀로 복사하기 자동화\n\n웹페이지의 데이터를 자동으로 복사하여 엑셀 파일로 저장하는 부품입니다."
+            elif "민원" in name or "공무원" in name:
+                desc = "🏛️ 민원/공무원 프로그램 자동화\n\n민원 처리나 공무원 업무 프로그램을 자동으로 실행하고 조작하는 부품입니다."
             else:
                 desc = f"⚙️ {item['type']} 자동화 부품\n\n자동화 작업을 수행하는 부품입니다."
         
         price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
         
-        # 카드 HTML
         card_html = f"""
-        <div class="item-card">
-            <div style="display: flex; gap: 24px; align-items: start;">
-                <div style="flex-shrink: 0; width: 200px; text-align: center;">
+        <div class="daangn-card">
+            <div style="display: flex; gap: 20px; align-items: start;">
+                <div style="flex-shrink: 0; width: 180px; text-align: center;">
                     {sculpture_html}
                     <div style="margin-top: 8px; font-size: 0.85rem; color: #6b7280; font-weight: 600;">
                         🏛️ {sculpture_name}
                     </div>
                 </div>
                 <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
                         <div>
-                            <h3 class="item-title">{item['name']}</h3>
-                            <div style="color: #6b7280; font-size: 0.9rem; margin-top: 6px;">
+                            <h3 class="daangn-title">{item['name']}</h3>
+                            <div style="color: #6b7280; font-size: 0.9rem; margin-top: 4px;">
                                 👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <div class="item-price">{price_text}</div>
+                            <div class="daangn-price">{price_text}</div>
                         </div>
                     </div>
-                    <div class="item-description-box">
-                        <div style="color: #374151; line-height: 1.8; white-space: pre-line; font-size: 0.95rem;">
-                            {desc}
-                        </div>
+                    <div class="daangn-desc">
+                        {desc}
                     </div>
                 </div>
             </div>
@@ -857,7 +791,6 @@ def streamlit_app():
         """
         st.markdown(card_html, unsafe_allow_html=True)
         
-        # 구매 버튼
         if show_download and not is_sample:
             col1, col2, col3 = st.columns([3, 1, 1])
             with col2:
@@ -886,7 +819,18 @@ def streamlit_app():
         # 아이템 목록
         items = get_all_items()
         
-        # 샘플 데이터 (아이템이 없을 때)
+        # 필터링
+        if filter_type != "전체":
+            type_filter = "macro" if "부품" in filter_type else "job"
+            items = [i for i in items if i['type'] == type_filter]
+        
+        # 정렬
+        if sort_by == "인기순":
+            items.sort(key=lambda x: x['download_count'], reverse=True)
+        elif sort_by == "가격순":
+            items.sort(key=lambda x: x['price'])
+        
+        # 샘플 데이터
         sample_items = [
             {
                 "id": 999,
@@ -917,36 +861,13 @@ def streamlit_app():
                 "price": 100,
                 "download_count": 156,
                 "created_at": "2024-01-13 09:15:00"
-            },
-            {
-                "id": 996,
-                "type": "job",
-                "name": "민원 처리 자동화 조립품",
-                "author": "샘플",
-                "description": "🏭 민원 처리 전체 프로세스 자동화\n\n여러 부품을 조합하여 민원 처리 전체 프로세스를 자동화하는 조립품입니다.",
-                "price": 200,
-                "download_count": 45,
-                "created_at": "2024-01-12 14:00:00"
             }
         ]
         
-        # 실제 아이템이 없으면 샘플 표시
         if not items:
             items = sample_items
             st.info("💡 현재 등록된 아이템이 없습니다. 아래는 샘플 아이템입니다.")
         
-        # 필터링
-        if filter_type != "전체":
-            type_filter = "macro" if "부품" in filter_type else "job"
-            items = [i for i in items if i['type'] == type_filter]
-        
-        # 정렬
-        if sort_by == "인기순":
-            items.sort(key=lambda x: x['download_count'], reverse=True)
-        elif sort_by == "가격순":
-            items.sort(key=lambda x: x['price'])
-        
-        # 아이템 표시
         for item in items:
             show_item_card(item, show_download=(item.get('id', 0) < 900))
     
@@ -959,8 +880,8 @@ def streamlit_app():
             
             with st.form("sell_form"):
                 item_type = st.selectbox("타입", ["부품 (macro)", "조립품 (job)"])
-                item_name = st.text_input("이름 *", placeholder="예: 새올로그인 자동화")
-                item_description = st.text_area("설명", placeholder="이 부품의 기능과 사용법을 자세히 설명하세요...\n\n예:\n🔐 자동 로그인 자동화\n\n새올 시스템에 자동으로 로그인하는 부품입니다. 아이디와 비밀번호를 입력하면 자동으로 로그인 프로세스를 수행합니다.", height=150)
+                item_name = st.text_input("이름 *", placeholder="예: 자동 로그인 부품")
+                item_description = st.text_area("설명", placeholder="이 부품의 기능과 사용법을 설명하세요...", height=100)
                 item_price = st.number_input("가격 (포인트)", min_value=0, value=0, step=10)
                 uploaded_file = st.file_uploader("ZIP 파일 업로드 *", type=['zip'])
                 
@@ -989,6 +910,7 @@ def streamlit_app():
                                 json.dumps({"description": item_description, "price": item_price}, ensure_ascii=False)
                             ))
                             
+                            # 판매자에게 보너스 포인트
                             bonus = int(item_price * 0.1)
                             if bonus > 0:
                                 current_points = get_user_points(st.session_state.user_id)
@@ -1008,22 +930,25 @@ def streamlit_app():
         else:
             st.header("🛍️ 내 상점")
             
+            # 내 아이템 목록
             my_items = [i for i in get_all_items() if i['author'] == st.session_state.user_id]
             
             if my_items:
                 st.subheader(f"내가 판매한 아이템 ({len(my_items)}개)")
                 for item in my_items:
-                    show_item_card(item, show_download=False)
-                    if st.button(f"🗑️ 삭제", key=f"del_{item['id']}"):
-                        conn = get_db()
-                        c = conn.cursor()
-                        c.execute("DELETE FROM items WHERE id = ?", (item['id'],))
-                        conn.commit()
-                        conn.close()
-                        st.success("삭제되었습니다.")
-                        st.rerun()
+                    with st.expander(f"{item['name']} - {item['price']}P"):
+                        show_item_card(item, show_download=False)
+                        if st.button(f"🗑️ 삭제", key=f"del_{item['id']}"):
+                            conn = get_db()
+                            c = conn.cursor()
+                            c.execute("DELETE FROM items WHERE id = ?", (item['id'],))
+                            conn.commit()
+                            conn.close()
+                            st.success("삭제되었습니다.")
+                            st.rerun()
             else:
                 st.info("판매한 아이템이 없습니다.")
+    
 
 # ==========================================
 # 서버 실행
@@ -1071,3 +996,4 @@ if __name__ == "__main__":
             if FASTAPI_AVAILABLE and app:
                 print("🚀 FastAPI 서버도 자동으로 시작됩니다: http://localhost:8000")
         streamlit_app()
+
