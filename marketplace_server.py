@@ -568,7 +568,7 @@ def streamlit_app():
     
     # 사이드바 (로그인/회원가입)
     with st.sidebar:
-        st.markdown("### 🦦 충주씨 행정자동화 창의력 마켓 / 문의 : kim0395kk@korea.kr")
+        st.markdown("### 🦦 충주씨 행정자동화 창의 마켓  ##문의: kim0395kk@korea.kr")
         
         if st.session_state.logged_in:
             st.success(f"✅ {st.session_state.user_id}님")
@@ -685,7 +685,7 @@ def streamlit_app():
                             st.error(f"회원가입 실패: {e}")
     
     # 메인 페이지 - 마켓플레이스
-    st.markdown("## 🦦 충주씨 행정자동화 창의력 마켓 / 문의 : kim0395kk@korea.kr")
+    st.markdown("##🦦 충주씨 행정자동화 창의 마켓  ##문의: kim0395kk@korea.kr")
     
     # 탭: 마켓플레이스, 판매하기, 내 상점
     tab_market, tab_sell, tab_my_shop = st.tabs(["🏪 마켓플레이스", "📤 판매하기", "🛍️ 내 상점"])
@@ -1229,7 +1229,5 @@ if __name__ == "__main__":
             if FASTAPI_AVAILABLE and app:
                 print("🚀 FastAPI 서버도 자동으로 시작됩니다: http://localhost:8000")
         streamlit_app()
-
-
 
 
