@@ -389,12 +389,66 @@ if FASTAPI_AVAILABLE and app:
 # ==========================================
 
 def streamlit_app():
-    """Streamlit 관리 인터페이스"""
+    """Streamlit 마켓플레이스 (인스타그램 + 깃허브 스타일)"""
     st.set_page_config(
-        page_title="마켓플레이스 관리",
+        page_title="마켓플레이스",
         page_icon="🛒",
-        layout="wide"
+        layout="wide",
+        initial_sidebar_state="expanded"
     )
+    
+    # CSS 스타일 (인스타그램 + 깃허브 느낌)
+    st.markdown("""
+    <style>
+    .main {
+        padding-top: 2rem;
+    }
+    .item-card {
+        border: 1px solid #e1e4e8;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: white;
+        transition: box-shadow 0.2s;
+    }
+    .item-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .item-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .item-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #24292f;
+        margin: 0;
+    }
+    .item-author {
+        color: #656d76;
+        font-size: 0.9rem;
+        margin-left: 0.5rem;
+    }
+    .item-price {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #0969da;
+    }
+    .item-description {
+        color: #656d76;
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+    .item-stats {
+        display: flex;
+        gap: 1rem;
+        color: #656d76;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
     # 세션 상태 초기화
     if "logged_in" not in st.session_state:
@@ -403,23 +457,44 @@ def streamlit_app():
         st.session_state.user_id = None
     if "user_token" not in st.session_state:
         st.session_state.user_token = None
+    if "current_tab" not in st.session_state:
+        st.session_state.current_tab = "마켓플레이스"
     
-    # 로그인 페이지
-    if not st.session_state.logged_in:
-        st.title("🛒 마켓플레이스 로그인")
+    # 사이드바 (로그인/회원가입)
+    with st.sidebar:
+        st.title("🛒 마켓플레이스")
         
-        tab_login, tab_register = st.tabs(["🔐 로그인", "📝 회원가입"])
-        
-        with tab_login:
-            st.header("로그인")
+        if st.session_state.logged_in:
+            st.success(f"✅ {st.session_state.user_id}님")
+            try:
+                if IS_STREAMLIT_CLOUD or not FASTAPI_AVAILABLE:
+                    points = get_user_points(st.session_state.user_id)
+                else:
+                    import requests
+                    response = requests.get(
+                        "http://localhost:8000/api/points",
+                        headers={"Authorization": f"Bearer {st.session_state.user_token}"},
+                        timeout=5
+                    )
+                    points = response.json().get("points", 0) if response.status_code == 200 else 0
+                st.metric("포인트", f"{points}P")
+            except:
+                pass
+            
+            if st.button("🚪 로그아웃", use_container_width=True):
+                st.session_state.logged_in = False
+                st.session_state.user_id = None
+                st.session_state.user_token = None
+                st.rerun()
+        else:
+            st.header("🔐 로그인")
             login_user_id = st.text_input("사용자 ID", key="login_id")
             login_password = st.text_input("비밀번호", type="password", key="login_pw")
             
-            if st.button("로그인", type="primary"):
+            if st.button("로그인", type="primary", use_container_width=True):
                 if login_user_id and login_password:
                     try:
                         if IS_STREAMLIT_CLOUD or not FASTAPI_AVAILABLE:
-                            # Streamlit Cloud 또는 FastAPI 없을 때: 직접 DB 사용
                             conn = get_db()
                             c = conn.cursor()
                             password_hash = hash_password(login_password)
@@ -428,14 +503,9 @@ def streamlit_app():
                             user = c.fetchone()
                             
                             if user:
-                                # 토큰 생성
                                 token = secrets.token_urlsafe(32)
                                 expires_at = datetime.now().replace(hour=23, minute=59, second=59).isoformat()
-                                
-                                # 기존 토큰 삭제
                                 c.execute("DELETE FROM tokens WHERE user_id = ?", (login_user_id,))
-                                
-                                # 새 토큰 저장
                                 c.execute("INSERT INTO tokens (token, user_id, expires_at) VALUES (?, ?, ?)",
                                           (token, login_user_id, expires_at))
                                 conn.commit()
@@ -444,13 +514,12 @@ def streamlit_app():
                                 st.session_state.logged_in = True
                                 st.session_state.user_id = login_user_id
                                 st.session_state.user_token = token
-                                st.success(f"로그인 성공! 포인트: {user[1]}P")
+                                st.success("로그인 성공!")
                                 st.rerun()
                             else:
                                 conn.close()
                                 st.error("아이디 또는 비밀번호가 잘못되었습니다.")
                         else:
-                            # 로컬에서 FastAPI 사용
                             import requests
                             response = requests.post(
                                 "http://localhost:8000/api/login",
@@ -462,47 +531,40 @@ def streamlit_app():
                                 st.session_state.logged_in = True
                                 st.session_state.user_id = data["user_id"]
                                 st.session_state.user_token = data["token"]
-                                st.success(f"로그인 성공! 포인트: {data['points']}P")
+                                st.success("로그인 성공!")
                                 st.rerun()
                             else:
-                                st.error(response.json().get("detail", "로그인 실패"))
+                                st.error("로그인 실패")
                     except Exception as e:
                         st.error(f"로그인 실패: {e}")
-                else:
-                    st.warning("ID와 비밀번호를 입력하세요.")
-        
-        with tab_register:
-            st.header("회원가입")
+            
+            st.divider()
+            st.header("📝 회원가입")
             reg_user_id = st.text_input("사용자 ID", key="reg_id")
             reg_password = st.text_input("비밀번호", type="password", key="reg_pw")
             reg_password_confirm = st.text_input("비밀번호 확인", type="password", key="reg_pw_confirm")
             
-            if st.button("회원가입", type="primary"):
+            if st.button("회원가입", use_container_width=True):
                 if reg_user_id and reg_password:
                     if reg_password != reg_password_confirm:
                         st.error("비밀번호가 일치하지 않습니다.")
                     else:
                         try:
                             if IS_STREAMLIT_CLOUD or not FASTAPI_AVAILABLE:
-                                # Streamlit Cloud 또는 FastAPI 없을 때: 직접 DB 사용
                                 conn = get_db()
                                 c = conn.cursor()
-                                
-                                # 중복 확인
                                 c.execute("SELECT user_id FROM users WHERE user_id = ?", (reg_user_id,))
                                 if c.fetchone():
                                     conn.close()
                                     st.error("이미 존재하는 사용자 ID입니다.")
                                 else:
-                                    # 사용자 생성
                                     password_hash = hash_password(reg_password)
                                     c.execute("INSERT INTO users (user_id, password_hash, points) VALUES (?, ?, ?)",
                                               (reg_user_id, password_hash, 100))
                                     conn.commit()
                                     conn.close()
-                                    st.success("회원가입 성공! 100포인트가 지급되었습니다. 로그인 탭에서 로그인하세요.")
+                                    st.success("회원가입 성공! 100포인트 지급")
                             else:
-                                # 로컬에서 FastAPI 사용
                                 import requests
                                 response = requests.post(
                                     "http://localhost:8000/api/register",
@@ -510,101 +572,232 @@ def streamlit_app():
                                     timeout=5
                                 )
                                 if response.status_code == 200:
-                                    st.success("회원가입 성공! 로그인 탭에서 로그인하세요.")
+                                    st.success("회원가입 성공!")
                                 else:
-                                    st.error(response.json().get("detail", "회원가입 실패"))
+                                    st.error("회원가입 실패")
                         except Exception as e:
                             st.error(f"회원가입 실패: {e}")
+    
+    # 메인 페이지 - 마켓플레이스 (인스타그램 + 깃허브 스타일)
+    st.title("🛒 마켓플레이스")
+    
+    # 탭: 마켓플레이스, 판매하기, 내 상점
+    tab_market, tab_sell, tab_my_shop = st.tabs(["🏪 마켓플레이스", "📤 판매하기", "🛍️ 내 상점"])
+    
+    # 아이템 목록 조회 함수
+    def get_all_items():
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, item_type, name, author, description, price, download_count, created_at
+            FROM items
+            ORDER BY created_at DESC
+        """)
+        items = []
+        for row in c.fetchall():
+            items.append({
+                "id": row[0],
+                "type": row[1],
+                "name": row[2],
+                "author": row[3],
+                "description": row[4],
+                "price": row[5],
+                "download_count": row[6],
+                "created_at": row[7]
+            })
+        conn.close()
+        return items
+    
+    # 아이템 카드 표시 함수
+    def show_item_card(item, show_download=True):
+        with st.container():
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown(f"### {item['name']}")
+                st.caption(f"👤 {item['author']} • 📅 {item['created_at'][:10]}")
+            with col2:
+                if item['price'] > 0:
+                    st.markdown(f"### {item['price']}P")
                 else:
-                    st.warning("ID와 비밀번호를 입력하세요.")
-        
-        # 테스트용 사용자 생성 버튼
-        with st.sidebar:
-            st.header("테스트")
-            if st.button("🧪 테스트 사용자 생성"):
-                try:
-                    if IS_STREAMLIT_CLOUD or not FASTAPI_AVAILABLE:
-                        # 직접 DB 사용
-                        conn = get_db()
-                        c = conn.cursor()
-                        test_id = "test_user"
-                        test_pw = "test123"
-                        
-                        # 중복 확인
-                        c.execute("SELECT user_id FROM users WHERE user_id = ?", (test_id,))
-                        if c.fetchone():
-                            st.info("이미 존재하는 사용자입니다.")
-                        else:
-                            password_hash = hash_password(test_pw)
-                            c.execute("INSERT INTO users (user_id, password_hash, points) VALUES (?, ?, ?)",
-                                      (test_id, password_hash, 100))
-                            conn.commit()
-                            st.success(f"테스트 사용자 생성 완료!\nID: {test_id}\nPW: {test_pw}")
-                        conn.close()
+                    st.markdown("### 🆓 무료")
+            
+            if item['description']:
+                st.write(item['description'])
+            
+            col_info, col_action = st.columns([2, 1])
+            with col_info:
+                st.caption(f"📦 {item['type']} • ⬇️ {item['download_count']}회 다운로드")
+            with col_action:
+                if show_download:
+                    if st.session_state.logged_in:
+                        if st.button("🛒 구매하기", key=f"buy_{item['id']}", use_container_width=True):
+                            # 구매 로직
+                            try:
+                                if IS_STREAMLIT_CLOUD or not FASTAPI_AVAILABLE:
+                                    user_id = st.session_state.user_id
+                                    conn = get_db()
+                                    c = conn.cursor()
+                                    
+                                    # 아이템 조회
+                                    c.execute("SELECT price, zip_data, author FROM items WHERE id = ?", (item['id'],))
+                                    item_data = c.fetchone()
+                                    
+                                    if item_data:
+                                        price = item_data[0] if item_data[2] != user_id else 0
+                                        zip_data = item_data[1]
+                                        
+                                        # 포인트 확인
+                                        current_points = get_user_points(user_id)
+                                        if current_points < price:
+                                            st.error(f"포인트가 부족합니다. (필요: {price}P, 보유: {current_points}P)")
+                                        else:
+                                            # 포인트 차감
+                                            if price > 0:
+                                                update_user_points(user_id, current_points - price)
+                                                seller_points = get_user_points(item_data[2])
+                                                update_user_points(item_data[2], seller_points + price)
+                                                c.execute("INSERT INTO transactions (buyer_id, item_id, price) VALUES (?, ?, ?)",
+                                                          (user_id, item['id'], price))
+                                            
+                                            # 다운로드 횟수 증가
+                                            c.execute("UPDATE items SET download_count = download_count + 1 WHERE id = ?", (item['id'],))
+                                            
+                                            # ZIP 파일 다운로드
+                                            import tempfile
+                                            with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp:
+                                                tmp.write(zip_data)
+                                                tmp_path = tmp.name
+                                            
+                                            st.download_button(
+                                                label="📥 다운로드",
+                                                data=zip_data,
+                                                file_name=f"{item['name']}.zip",
+                                                mime="application/zip",
+                                                key=f"dl_{item['id']}"
+                                            )
+                                            st.success("구매 완료!")
+                                            
+                                            conn.commit()
+                                            conn.close()
+                                            st.rerun()
+                                    else:
+                                        st.error("아이템을 찾을 수 없습니다.")
+                                else:
+                                    st.info("로컬 API 서버가 필요합니다.")
+                            except Exception as e:
+                                st.error(f"구매 실패: {e}")
                     else:
-                        # FastAPI 사용
-                        import requests
-                        test_id = "test_user"
-                        test_pw = "test123"
-                        response = requests.post(
-                            "http://localhost:8000/api/register",
-                            json={"user_id": test_id, "password": test_pw},
-                            timeout=5
-                        )
-                        if response.status_code == 200:
-                            st.success(f"테스트 사용자 생성 완료!\nID: {test_id}\nPW: {test_pw}")
-                        else:
-                            st.info("이미 존재하는 사용자입니다.")
-                except Exception as e:
-                    st.error(f"오류: {e}")
-        
-        return
+                        st.info("로그인 필요")
+            st.divider()
     
-    # 로그인 후 메인 페이지
-    st.title("🛒 마켓플레이스 관리 시스템")
-    
-    # 사이드바
-    with st.sidebar:
-        st.header("사용자 정보")
-        st.success(f"✅ {st.session_state.user_id}님")
+    # 마켓플레이스 탭
+    with tab_market:
+        st.header("🛍️ 부품 & 조립품 마켓")
         
-        # 포인트 조회
-        try:
-            if IS_STREAMLIT_CLOUD or not FASTAPI_AVAILABLE:
-                # 직접 DB 사용
-                points = get_user_points(st.session_state.user_id)
-                st.metric("포인트", f"{points}P")
+        # 필터
+        col_filter1, col_filter2 = st.columns(2)
+        with col_filter1:
+            filter_type = st.selectbox("타입", ["전체", "부품 (macro)", "조립품 (job)"], key="filter_type")
+        with col_filter2:
+            sort_by = st.selectbox("정렬", ["최신순", "인기순", "가격순"], key="sort_by")
+        
+        # 아이템 목록
+        items = get_all_items()
+        
+        # 필터링
+        if filter_type != "전체":
+            type_filter = "macro" if "부품" in filter_type else "job"
+            items = [i for i in items if i['type'] == type_filter]
+        
+        # 정렬
+        if sort_by == "인기순":
+            items.sort(key=lambda x: x['download_count'], reverse=True)
+        elif sort_by == "가격순":
+            items.sort(key=lambda x: x['price'])
+        
+        if items:
+            for item in items:
+                show_item_card(item)
+        else:
+            st.info("등록된 아이템이 없습니다.")
+    
+    # 판매하기 탭
+    with tab_sell:
+        if not st.session_state.logged_in:
+            st.info("💡 판매하려면 사이드바에서 로그인하세요.")
+        else:
+            st.header("📤 새 아이템 판매하기")
+            
+            with st.form("sell_form"):
+                item_type = st.selectbox("타입", ["부품 (macro)", "조립품 (job)"])
+                item_name = st.text_input("이름 *", placeholder="예: 자동 로그인 부품")
+                item_description = st.text_area("설명", placeholder="이 부품의 기능과 사용법을 설명하세요...", height=100)
+                item_price = st.number_input("가격 (포인트)", min_value=0, value=0, step=10)
+                uploaded_file = st.file_uploader("ZIP 파일 업로드 *", type=['zip'])
+                
+                submitted = st.form_submit_button("🚀 판매 등록", type="primary", use_container_width=True)
+                
+                if submitted:
+                    if not item_name or not uploaded_file:
+                        st.error("이름과 ZIP 파일은 필수입니다.")
+                    else:
+                        try:
+                            zip_data = uploaded_file.read()
+                            conn = get_db()
+                            c = conn.cursor()
+                            
+                            type_val = "macro" if "부품" in item_type else "job"
+                            c.execute("""
+                                INSERT INTO items (item_type, name, author, description, price, zip_data, metadata)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                type_val,
+                                item_name,
+                                st.session_state.user_id,
+                                item_description,
+                                item_price,
+                                zip_data,
+                                json.dumps({"description": item_description, "price": item_price}, ensure_ascii=False)
+                            ))
+                            
+                            # 판매자에게 보너스 포인트
+                            bonus = int(item_price * 0.1)
+                            if bonus > 0:
+                                current_points = get_user_points(st.session_state.user_id)
+                                update_user_points(st.session_state.user_id, current_points + bonus)
+                            
+                            conn.commit()
+                            conn.close()
+                            st.success(f"✅ 판매 등록 완료! {'보너스 ' + str(bonus) + 'P 지급' if bonus > 0 else ''}")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"등록 실패: {e}")
+    
+    # 내 상점 탭
+    with tab_my_shop:
+        if not st.session_state.logged_in:
+            st.info("💡 내 상점을 보려면 사이드바에서 로그인하세요.")
+        else:
+            st.header("🛍️ 내 상점")
+            
+            # 내 아이템 목록
+            my_items = [i for i in get_all_items() if i['author'] == st.session_state.user_id]
+            
+            if my_items:
+                st.subheader(f"내가 판매한 아이템 ({len(my_items)}개)")
+                for item in my_items:
+                    with st.expander(f"{item['name']} - {item['price']}P"):
+                        show_item_card(item, show_download=False)
+                        if st.button(f"🗑️ 삭제", key=f"del_{item['id']}"):
+                            conn = get_db()
+                            c = conn.cursor()
+                            c.execute("DELETE FROM items WHERE id = ?", (item['id'],))
+                            conn.commit()
+                            conn.close()
+                            st.success("삭제되었습니다.")
+                            st.rerun()
             else:
-                # FastAPI 사용
-                import requests
-                response = requests.get(
-                    "http://localhost:8000/api/points",
-                    headers={"Authorization": f"Bearer {st.session_state.user_token}"},
-                    timeout=5
-                )
-                if response.status_code == 200:
-                    points = response.json().get("points", 0)
-                    st.metric("포인트", f"{points}P")
-        except:
-            pass
-        
-        if st.button("🚪 로그아웃"):
-            st.session_state.logged_in = False
-            st.session_state.user_id = None
-            st.session_state.user_token = None
-            st.rerun()
-        
-        st.divider()
-        st.header("서버 상태")
-        st.success("✅ 서버 실행 중")
-        st.info(f"포트: 8000")
-        
-        if st.button("🔄 데이터베이스 초기화"):
-            init_db()
-            st.success("데이터베이스 초기화 완료")
-    
-    # 탭
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 대시보드", "👥 사용자 관리", "📦 아이템 관리", "💰 거래 내역"])
+                st.info("판매한 아이템이 없습니다.")
     
     with tab1:
         st.header("📊 대시보드")
