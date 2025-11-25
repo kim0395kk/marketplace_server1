@@ -10,6 +10,7 @@ import os
 import hashlib
 import secrets
 import base64
+import html
 from datetime import datetime
 
 # Streamlit Cloud 체크 (여러 방법으로 확인)
@@ -568,7 +569,7 @@ def streamlit_app():
     
     # 사이드바 (로그인/회원가입)
     with st.sidebar:
-        st.markdown("### 🦦 충주씨 마켓플레이스")
+        st.markdown("### 🦦 충주씨 행정자동화 창의 마켓 문의 #kim0395kk@korea.kr")
         
         if st.session_state.logged_in:
             st.success(f"✅ {st.session_state.user_id}님")
@@ -685,7 +686,7 @@ def streamlit_app():
                             st.error(f"회원가입 실패: {e}")
     
     # 메인 페이지 - 마켓플레이스
-    st.markdown("## 🦦 충주씨 자동화 부품 마켓플레이스")
+    st.markdown("## 🦦 충주씨 행정자동화 창의 마켓 문의 #kim0395kk@korea.kr")
     
     # 탭: 마켓플레이스, 판매하기, 내 상점
     tab_market, tab_sell, tab_my_shop = st.tabs(["🏪 마켓플레이스", "📤 판매하기", "🛍️ 내 상점"])
@@ -1050,31 +1051,14 @@ def streamlit_app():
             ]
             gradient = gradients[item.get('id', 0) % len(gradients)]
             
-            # HTML 이스케이프 처리
-            item_name = item['name'].replace('"', '&quot;').replace("'", "&#39;")
-            item_author = item['author'].replace('"', '&quot;').replace("'", "&#39;")
-            item_desc = desc.replace(chr(10), '<br>').replace('"', '&quot;').replace("'", "&#39;")
+            # HTML 이스케이프 처리 (더 철저하게)
+            item_name = html.escape(item['name'])
+            item_author = html.escape(item['author'])
+            item_desc = html.escape(desc).replace('\n', '<br>')
             
-            # 인스타그램 스타일 카드 HTML (이미지와 텍스트 함께)
-            grid_html += f"""
-            <div class="instagram-card" id="card_{item['id']}">
-                <div class="card-image" style="background: {gradient};">
-                    <div style="font-size: 60px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); text-align: center; line-height: 200px;">
-                        {icon}
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div class="card-title">{item_name}</div>
-                    <div class="card-meta">
-                        👤 {item_author} • ⬇️ {item['download_count']}명
-                    </div>
-                    <div class="card-price">{price_text}</div>
-                    <div class="card-desc">
-                        {item_desc}
-                    </div>
-                </div>
-            </div>
-            """
+            # 인스타그램 스타일 카드 HTML (한 줄로 작성하여 코드 블록으로 인식되지 않도록)
+            card_id = item['id']
+            grid_html += f'<div class="instagram-card" id="card_{card_id}"><div class="card-image" style="background: {gradient};"><div style="font-size: 60px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); text-align: center; line-height: 200px;">{icon}</div></div><div class="card-content"><div class="card-title">{item_name}</div><div class="card-meta">👤 {item_author} • ⬇️ {item["download_count"]}명</div><div class="card-price">{price_text}</div><div class="card-desc">{item_desc}</div></div></div>'
             button_keys.append((item['id'], is_sample))
         
         grid_html += '</div>'
@@ -1223,5 +1207,6 @@ if __name__ == "__main__":
             if FASTAPI_AVAILABLE and app:
                 print("🚀 FastAPI 서버도 자동으로 시작됩니다: http://localhost:8000")
         streamlit_app()
+
 
 
