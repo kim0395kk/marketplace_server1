@@ -397,104 +397,101 @@ def streamlit_app():
         initial_sidebar_state="expanded"
     )
     
-    # 당근마켓 + 마인크래프트 조형물 스타일 CSS
+    # 인스타그램 스타일 CSS
     st.markdown("""
     <style>
     .main {
         padding-top: 1rem;
-        background: #f8f9fa;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
     }
     
-    /* 당근마켓 스타일 카드 */
-    .daangn-card {
+    /* 인스타그램 스타일 카드 */
+    .instagram-card {
         background: white;
-        border-radius: 12px;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        margin-bottom: 24px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .instagram-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    }
+    
+    .card-image {
+        width: 100%;
+        height: 280px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 80px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .card-image::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+        animation: shine 3s infinite;
+    }
+    
+    @keyframes shine {
+        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+    
+    .card-content {
         padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border: 1px solid #e5e7eb;
-        transition: all 0.3s ease;
     }
     
-    .daangn-card:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-        transform: translateY(-2px);
-    }
-    
-    .daangn-title {
-        font-size: 1.25rem;
+    .card-title {
+        font-size: 1.3rem;
         font-weight: 700;
-        color: #111827;
+        color: #1a1a1a;
         margin: 0 0 8px 0;
     }
     
-    .daangn-price {
-        font-size: 1.5rem;
+    .card-meta {
+        color: #8e8e8e;
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+    }
+    
+    .card-price {
+        font-size: 1.8rem;
         font-weight: 800;
         color: #FF6F0F;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        margin: 12px 0;
     }
     
-    .daangn-desc {
-        background: #f9fafb;
-        padding: 14px;
+    .card-desc {
+        color: #262626;
+        line-height: 1.6;
+        margin: 12px 0;
+        padding: 12px;
+        background: #fafafa;
         border-radius: 8px;
-        margin-top: 12px;
-        border-left: 4px solid #FF6F0F;
-        color: #374151;
-        line-height: 1.7;
-        white-space: pre-line;
-    }
-    
-    /* 마인크래프트 조형물 */
-    .minecraft-sculpture {
-        width: 160px;
-        height: 180px;
-        position: relative;
-        margin: 0 auto;
-        transform-style: preserve-3d;
-        transform: rotateX(-20deg) rotateY(25deg);
-    }
-    
-    .mc-block {
-        position: absolute;
-        transform-style: preserve-3d;
-    }
-    
-    .block-cube {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        transform-style: preserve-3d;
-    }
-    
-    .cube-face {
-        position: absolute;
-        border: 2px solid rgba(0,0,0,0.3);
-        box-sizing: border-box;
-    }
-    
-    .cube-front {
-        background: var(--face-color);
-        transform: translateZ(var(--depth));
-        box-shadow: inset 0 0 10px rgba(255,255,255,0.3);
-    }
-    
-    .cube-top {
-        background: var(--top-color);
-        transform: rotateX(90deg) translateZ(var(--depth));
-        box-shadow: inset 0 0 10px rgba(255,255,255,0.5);
-    }
-    
-    .cube-right {
-        background: var(--right-color);
-        transform: rotateY(90deg) translateZ(var(--depth));
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
     }
     
     .stButton>button {
         border-radius: 8px;
         font-weight: 600;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    
+    .stButton>button:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -657,55 +654,20 @@ def streamlit_app():
         conn.close()
         return items
     
-    # 세계 문화 유산 조형물 생성
-    def create_heritage_sculpture(item_id):
-        """아이템 ID에 따라 다른 조형물 생성"""
-        sculptures = {
-            0: {"name": "석가탑", "blocks": [
-                {"x": 60, "y": 140, "z": 60, "size": 20, "color": "#D4A574", "top": "#E8C9A0", "right": "#B8956A"},
-                {"x": 50, "y": 120, "z": 50, "size": 30, "color": "#C9A574", "top": "#D4B584", "right": "#A8956A"},
-                {"x": 40, "y": 100, "z": 40, "size": 40, "color": "#B8956A", "top": "#C9A574", "right": "#987A5A"},
-                {"x": 50, "y": 80, "z": 50, "size": 30, "color": "#C9A574", "top": "#D4B584", "right": "#A8956A"},
-                {"x": 60, "y": 60, "z": 60, "size": 20, "color": "#D4A574", "top": "#E8C9A0", "right": "#B8956A"},
-            ]},
-            1: {"name": "경복궁", "blocks": [
-                {"x": 30, "y": 120, "z": 30, "size": 40, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
-                {"x": 35, "y": 100, "z": 35, "size": 30, "color": "#A0522D", "top": "#B8653D", "right": "#8B4513"},
-                {"x": 40, "y": 80, "z": 40, "size": 20, "color": "#B8653D", "top": "#C8754D", "right": "#A0522D"},
-            ]},
-            2: {"name": "세종대왕", "blocks": [
-                {"x": 50, "y": 160, "z": 50, "size": 20, "color": "#8B4513", "top": "#A0522D", "right": "#654321"},
-                {"x": 55, "y": 140, "z": 55, "size": 10, "color": "#D4A574", "top": "#E8C9A0", "right": "#B8956A"},
-                {"x": 60, "y": 120, "z": 60, "size": 8, "color": "#F5DEB3", "top": "#FFF8DC", "right": "#E8C9A0"},
-            ]},
-            3: {"name": "에펠탑", "blocks": [
-                {"x": 70, "y": 180, "z": 70, "size": 10, "color": "#C0C0C0", "top": "#D3D3D3", "right": "#A0A0A0"},
-                {"x": 65, "y": 160, "z": 65, "size": 20, "color": "#A0A0A0", "top": "#B0B0B0", "right": "#808080"},
-                {"x": 60, "y": 140, "z": 60, "size": 30, "color": "#808080", "top": "#909090", "right": "#606060"},
-            ]},
-            4: {"name": "자유의 여신상", "blocks": [
-                {"x": 60, "y": 180, "z": 60, "size": 20, "color": "#8B7355", "top": "#A0826D", "right": "#6B5A4A"},
-                {"x": 65, "y": 160, "z": 65, "size": 10, "color": "#A0826D", "top": "#B8956A", "right": "#8B7355"},
-                {"x": 70, "y": 140, "z": 70, "size": 8, "color": "#B8956A", "top": "#C9A574", "right": "#A0826D"},
-            ]}
-        }
-        
-        selected = sculptures.get(item_id % len(sculptures), sculptures[0])
-        html = f'<div class="minecraft-sculpture">'
-        for block in selected["blocks"]:
-            depth = block["size"] / 2
-            # CSS 변수 대신 직접 스타일 적용
-            html += f'''
-            <div class="mc-block" style="left: {block["x"]}px; top: {block["y"]}px; width: {block["size"]}px; height: {block["size"]}px;">
-                <div class="block-cube">
-                    <div class="cube-face cube-front" style="background: {block["color"]}; transform: translateZ({depth}px);"></div>
-                    <div class="cube-face cube-top" style="background: {block["top"]}; transform: rotateX(90deg) translateZ({depth}px);"></div>
-                    <div class="cube-face cube-right" style="background: {block["right"]}; transform: rotateY(90deg) translateZ({depth}px);"></div>
-                </div>
-            </div>
-            '''
-        html += '</div>'
-        return html, selected["name"]
+    # 인스타그램 스타일 아이콘 생성
+    def get_item_icon(item_id, item_name):
+        """아이템에 맞는 이모지/아이콘 반환"""
+        icons = ["🏛️", "🔐", "📊", "⚙️", "🤖", "💼", "🎯", "🚀", "✨", "🎨"]
+        # 이름에 따라 아이콘 선택
+        name_lower = item_name.lower()
+        if "로그인" in item_name or "login" in name_lower:
+            return "🔐"
+        elif "엑셀" in item_name or "excel" in name_lower or "복사" in name_lower:
+            return "📊"
+        elif "민원" in item_name or "공무원" in item_name:
+            return "🏛️"
+        else:
+            return icons[item_id % len(icons)]
     
     # 구매 처리 함수
     def _handle_purchase(item):
@@ -744,10 +706,10 @@ def streamlit_app():
         except Exception as e:
             st.error(f"구매 실패: {e}")
     
-    # 당근마켓 스타일 카드 (Streamlit 네이티브 방식)
+    # 인스타그램 스타일 카드
     def show_item_card(item, show_download=True):
         is_sample = item.get('id', 0) >= 900
-        sculpture_html, sculpture_name = create_heritage_sculpture(item.get('id', 0))
+        icon = get_item_icon(item.get('id', 0), item['name'])
         
         desc = item.get('description', '')
         if not desc:
@@ -763,51 +725,49 @@ def streamlit_app():
         
         price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
         
-        # 당근마켓 스타일 카드 (간단한 방식)
-        st.markdown("---")
+        # 그라데이션 색상 (아이템별로 다르게)
+        gradients = [
+            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+            "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+            "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+            "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+        ]
+        gradient = gradients[item.get('id', 0) % len(gradients)]
         
-        col_img, col_content = st.columns([200, 1])
-        
-        with col_img:
-            # 조형물 표시 (HTML 직접 렌더링)
-            st.markdown(f"""
-            <div style="text-align: center; padding: 20px; background: #f9fafb; border-radius: 12px; margin-bottom: 10px;">
-                {sculpture_html}
-                <div style="margin-top: 10px; font-size: 0.9rem; color: #6b7280; font-weight: 600;">
-                    🏛️ {sculpture_name}
+        # 인스타그램 스타일 카드 HTML
+        card_html = f"""
+        <div class="instagram-card">
+            <div class="card-image" style="background: {gradient};">
+                <div style="font-size: 100px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">
+                    {icon}
                 </div>
             </div>
-            """, unsafe_allow_html=True)
-        
-        with col_content:
-            # 제목과 가격
-            col_title, col_price = st.columns([3, 1])
-            with col_title:
-                st.markdown(f"### {item['name']}")
-                st.caption(f"👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매")
-            with col_price:
-                st.markdown(f"## {price_text}")
-            
-            # 설명
-            st.markdown(f"""
-            <div style="background: #f9fafb; padding: 14px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #FF6F0F;">
-                <div style="color: #374151; line-height: 1.7; white-space: pre-line;">
+            <div class="card-content">
+                <div class="card-title">{item['name']}</div>
+                <div class="card-meta">
+                    👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매
+                </div>
+                <div class="card-price">{price_text}</div>
+                <div class="card-desc">
                     {desc.replace(chr(10), '<br>')}
                 </div>
             </div>
-            """, unsafe_allow_html=True)
-            
-            # 구매 버튼
-            if show_download and not is_sample:
-                if st.session_state.logged_in:
-                    if st.button("💬 구매하기", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
-                        _handle_purchase(item)
-                else:
-                    st.info("💡 로그인 필요")
-            elif is_sample:
-                st.info("📝 샘플 아이템")
+        </div>
+        """
+        st.markdown(card_html, unsafe_allow_html=True)
         
-        st.markdown("---")
+        # 구매 버튼
+        if show_download and not is_sample:
+            if st.session_state.logged_in:
+                if st.button("💬 구매하기", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
+                    _handle_purchase(item)
+            else:
+                st.info("💡 로그인 필요")
+        elif is_sample:
+            st.info("📝 샘플 아이템")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
     
     # 마켓플레이스 탭
     with tab_market:
@@ -1000,4 +960,5 @@ if __name__ == "__main__":
             if FASTAPI_AVAILABLE and app:
                 print("🚀 FastAPI 서버도 자동으로 시작됩니다: http://localhost:8000")
         streamlit_app()
+
 
