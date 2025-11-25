@@ -704,6 +704,55 @@ def streamlit_app():
         # 아이템 목록
         items = get_all_items()
         
+        # 샘플 데이터 (아이템이 없을 때)
+        sample_items = [
+            {
+                "id": 999,
+                "type": "macro",
+                "name": "새올로그인 자동화",
+                "author": "샘플",
+                "description": "🔐 자동 로그인 자동화\n\n새올 시스템에 자동으로 로그인하는 부품입니다. 아이디와 비밀번호를 입력하면 자동으로 로그인 프로세스를 수행합니다.",
+                "price": 50,
+                "download_count": 123,
+                "created_at": "2024-01-15 10:30:00"
+            },
+            {
+                "id": 998,
+                "type": "macro",
+                "name": "웹페이지에서 엑셀로 복사하기 자동화",
+                "author": "샘플",
+                "description": "📊 웹페이지에서 엑셀로 복사하기 자동화\n\n웹페이지의 데이터를 자동으로 복사하여 엑셀 파일로 저장하는 부품입니다. 수작업으로 하던 데이터 입력을 자동화합니다.",
+                "price": 80,
+                "download_count": 89,
+                "created_at": "2024-01-14 15:20:00"
+            },
+            {
+                "id": 997,
+                "type": "macro",
+                "name": "민원프로그램 모두 로그인 자동화",
+                "author": "샘플",
+                "description": "🏛️ 민원/공무원 프로그램 자동화\n\n민원 처리나 공무원 업무 프로그램을 자동으로 실행하고 조작하는 부품입니다. 반복적인 업무 프로세스를 자동화합니다.",
+                "price": 100,
+                "download_count": 156,
+                "created_at": "2024-01-13 09:15:00"
+            },
+            {
+                "id": 996,
+                "type": "job",
+                "name": "민원 처리 자동화 조립품",
+                "author": "샘플",
+                "description": "🏭 민원 처리 전체 프로세스 자동화\n\n여러 부품을 조합하여 민원 처리 전체 프로세스를 자동화하는 조립품입니다.",
+                "price": 200,
+                "download_count": 45,
+                "created_at": "2024-01-12 14:00:00"
+            }
+        ]
+        
+        # 실제 아이템이 없으면 샘플 표시
+        if not items:
+            items = sample_items
+            st.info("💡 현재 등록된 아이템이 없습니다. 아래는 샘플 아이템입니다.")
+        
         # 필터링
         if filter_type != "전체":
             type_filter = "macro" if "부품" in filter_type else "job"
@@ -715,231 +764,114 @@ def streamlit_app():
         elif sort_by == "가격순":
             items.sort(key=lambda x: x['price'])
         
-        if items:
-            for item in items:
-                show_item_card(item)
-        else:
-            st.info("등록된 아이템이 없습니다.")
-    
-    # 판매하기 탭
-    with tab_sell:
-        if not st.session_state.logged_in:
-            st.info("💡 판매하려면 사이드바에서 로그인하세요.")
-        else:
-            st.header("📤 새 아이템 판매하기")
+        # 아이템 표시 (당근마켓 스타일)
+        for item in items:
+            is_sample = item.get('id', 0) >= 900
             
-            with st.form("sell_form"):
-                item_type = st.selectbox("타입", ["부품 (macro)", "조립품 (job)"])
-                item_name = st.text_input("이름 *", placeholder="예: 자동 로그인 부품")
-                item_description = st.text_area("설명", placeholder="이 부품의 기능과 사용법을 설명하세요...", height=100)
-                item_price = st.number_input("가격 (포인트)", min_value=0, value=0, step=10)
-                uploaded_file = st.file_uploader("ZIP 파일 업로드 *", type=['zip'])
-                
-                submitted = st.form_submit_button("🚀 판매 등록", type="primary", use_container_width=True)
-                
-                if submitted:
-                    if not item_name or not uploaded_file:
-                        st.error("이름과 ZIP 파일은 필수입니다.")
+            # 레고 블럭 아이콘
+            lego_colors = ["🧩", "🟦", "🟩", "🟧", "🟨", "🟥", "🟪"]
+            lego_icon = lego_colors[item['id'] % len(lego_colors)] if item.get('id') else "🧩"
+            
+            # 카드 HTML
+            desc = item.get('description', '')
+            price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
+            
+            card_html = f"""
+            <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; 
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;">
+                <div style="display: flex; gap: 16px;">
+                    <div style="flex-shrink: 0;">
+                        <div style="width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                    border-radius: 12px; display: flex; align-items: center; justify-content: center; 
+                                    font-size: 48px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            {lego_icon}
+                        </div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                            <div>
+                                <h3 style="margin: 0; color: #111827; font-size: 1.1rem; font-weight: 600;">
+                                    {item['name']}
+                                </h3>
+                                <div style="color: #6b7280; font-size: 0.875rem; margin-top: 4px;">
+                                    👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.3rem; font-weight: 700; color: #ff6f0f;">
+                                    {price_text}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-top: 12px; 
+                                    border-left: 4px solid #ff6f0f;">
+                            <div style="color: #374151; line-height: 1.6; white-space: pre-line; font-size: 0.9375rem;">
+                                {desc}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """
+            st.markdown(card_html, unsafe_allow_html=True)
+            
+            # 구매 버튼
+            if not is_sample:
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col2:
+                    if st.session_state.logged_in:
+                        if st.button("💬 구매하기", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
+                            # 구매 로직 (기존 show_item_card의 구매 로직과 동일)
+                            try:
+                                if IS_STREAMLIT_CLOUD or not FASTAPI_AVAILABLE:
+                                    user_id = st.session_state.user_id
+                                    conn = get_db()
+                                    c = conn.cursor()
+                                    
+                                    c.execute("SELECT price, zip_data, author FROM items WHERE id = ?", (item['id'],))
+                                    item_data = c.fetchone()
+                                    
+                                    if item_data:
+                                        price = item_data[0] if item_data[2] != user_id else 0
+                                        zip_data = item_data[1]
+                                        
+                                        current_points = get_user_points(user_id)
+                                        if current_points < price:
+                                            st.error(f"포인트가 부족합니다. (필요: {price}P, 보유: {current_points}P)")
+                                        else:
+                                            if price > 0:
+                                                update_user_points(user_id, current_points - price)
+                                                seller_points = get_user_points(item_data[2])
+                                                update_user_points(item_data[2], seller_points + price)
+                                                c.execute("INSERT INTO transactions (buyer_id, item_id, price) VALUES (?, ?, ?)",
+                                                          (user_id, item['id'], price))
+                                            
+                                            c.execute("UPDATE items SET download_count = download_count + 1 WHERE id = ?", (item['id'],))
+                                            
+                                            st.download_button(
+                                                label="📥 다운로드",
+                                                data=zip_data,
+                                                file_name=f"{item['name']}.zip",
+                                                mime="application/zip",
+                                                key=f"dl_{item['id']}"
+                                            )
+                                            st.success("✅ 구매 완료!")
+                                            
+                                            conn.commit()
+                                            conn.close()
+                                            st.rerun()
+                            except Exception as e:
+                                st.error(f"구매 실패: {e}")
                     else:
-                        try:
-                            zip_data = uploaded_file.read()
-                            conn = get_db()
-                            c = conn.cursor()
-                            
-                            type_val = "macro" if "부품" in item_type else "job"
-                            c.execute("""
-                                INSERT INTO items (item_type, name, author, description, price, zip_data, metadata)
-                                VALUES (?, ?, ?, ?, ?, ?, ?)
-                            """, (
-                                type_val,
-                                item_name,
-                                st.session_state.user_id,
-                                item_description,
-                                item_price,
-                                zip_data,
-                                json.dumps({"description": item_description, "price": item_price}, ensure_ascii=False)
-                            ))
-                            
-                            # 판매자에게 보너스 포인트
-                            bonus = int(item_price * 0.1)
-                            if bonus > 0:
-                                current_points = get_user_points(st.session_state.user_id)
-                                update_user_points(st.session_state.user_id, current_points + bonus)
-                            
-                            conn.commit()
-                            conn.close()
-                            st.success(f"✅ 판매 등록 완료! {'보너스 ' + str(bonus) + 'P 지급' if bonus > 0 else ''}")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"등록 실패: {e}")
-    
-    # 내 상점 탭
-    with tab_my_shop:
-        if not st.session_state.logged_in:
-            st.info("💡 내 상점을 보려면 사이드바에서 로그인하세요.")
-        else:
-            st.header("🛍️ 내 상점")
-            
-            # 내 아이템 목록
-            my_items = [i for i in get_all_items() if i['author'] == st.session_state.user_id]
-            
-            if my_items:
-                st.subheader(f"내가 판매한 아이템 ({len(my_items)}개)")
-                for item in my_items:
-                    with st.expander(f"{item['name']} - {item['price']}P"):
-                        show_item_card(item, show_download=False)
-                        if st.button(f"🗑️ 삭제", key=f"del_{item['id']}"):
-                            conn = get_db()
-                            c = conn.cursor()
-                            c.execute("DELETE FROM items WHERE id = ?", (item['id'],))
-                            conn.commit()
-                            conn.close()
-                            st.success("삭제되었습니다.")
-                            st.rerun()
+                        st.info("💡 로그인 필요")
             else:
-                st.info("판매한 아이템이 없습니다.")
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col2:
+                    st.info("📝 샘플 아이템")
+            st.markdown("<br>", unsafe_allow_html=True)    
     
-    with tab1:
-        st.header("📊 대시보드")
-        
-        conn = get_db()
-        c = conn.cursor()
-        
-        # 통계
-        col1, col2, col3, col4 = st.columns(4)
-        
-        c.execute("SELECT COUNT(*) FROM users")
-        user_count = c.fetchone()[0]
-        col1.metric("총 사용자", user_count)
-        
-        c.execute("SELECT COUNT(*) FROM items")
-        item_count = c.fetchone()[0]
-        col2.metric("총 아이템", item_count)
-        
-        c.execute("SELECT SUM(price) FROM transactions")
-        total_revenue = c.fetchone()[0] or 0
-        col3.metric("총 거래액", f"{total_revenue}P")
-        
-        c.execute("SELECT COUNT(*) FROM transactions")
-        transaction_count = c.fetchone()[0]
-        col4.metric("총 거래 수", transaction_count)
-        
-        # 최근 아이템
-        st.subheader("최근 등록된 아이템")
-        c.execute("""
-            SELECT id, item_type, name, author, price, download_count, created_at
-            FROM items
-            ORDER BY created_at DESC
-            LIMIT 10
-        """)
-        
-        items = c.fetchall()
-        if items:
-            for item in items:
-                with st.expander(f"[{item[1]}] {item[2]} - {item[3]} ({item[4]}P)"):
-                    st.write(f"**ID:** {item[0]}")
-                    st.write(f"**다운로드 수:** {item[5]}")
-                    st.write(f"**등록일:** {item[6]}")
-        else:
-            st.info("등록된 아이템이 없습니다.")
-        
-        conn.close()
     
-    with tab2:
-        st.header("👥 사용자 관리")
-        
-        conn = get_db()
-        c = conn.cursor()
-        
-        # 사용자 목록
-        c.execute("SELECT user_id, points, created_at FROM users ORDER BY created_at DESC")
-        users = c.fetchall()
-        
-        if users:
-            st.dataframe(
-                [[u[0], u[1], u[2]] for u in users],
-                columns=["사용자 ID", "포인트", "가입일"],
-                use_container_width=True
-            )
-        else:
-            st.info("등록된 사용자가 없습니다.")
-        
-        # 포인트 수동 조정
-        st.subheader("포인트 수동 조정")
-        user_id = st.text_input("사용자 ID")
-        points = st.number_input("포인트", value=0, step=10)
-        
-        if st.button("포인트 조정"):
-            if user_id:
-                current = get_user_points(user_id)
-                update_user_points(user_id, points)
-                st.success(f"{user_id}의 포인트를 {current}에서 {points}로 변경했습니다.")
-            else:
-                st.error("사용자 ID를 입력하세요.")
-        
-        conn.close()
     
-    with tab3:
-        st.header("📦 아이템 관리")
-        
-        conn = get_db()
-        c = conn.cursor()
-        
-        # 아이템 목록
-        c.execute("""
-            SELECT id, item_type, name, author, price, download_count, created_at
-            FROM items
-            ORDER BY created_at DESC
-        """)
-        items = c.fetchall()
-        
-        if items:
-            for item in items:
-                with st.expander(f"[{item[1]}] {item[2]} - {item[3]} ({item[4]}P, 다운로드: {item[5]})"):
-                    col1, col2 = st.columns(2)
-                    col1.write(f"**ID:** {item[0]}")
-                    col1.write(f"**타입:** {item[1]}")
-                    col1.write(f"**작성자:** {item[3]}")
-                    col2.write(f"**가격:** {item[4]}P")
-                    col2.write(f"**다운로드 수:** {item[5]}")
-                    col2.write(f"**등록일:** {item[6]}")
-                    
-                    if st.button(f"삭제", key=f"delete_{item[0]}"):
-                        c.execute("DELETE FROM items WHERE id = ?", (item[0],))
-                        conn.commit()
-                        st.success("삭제되었습니다.")
-                        st.rerun()
-        else:
-            st.info("등록된 아이템이 없습니다.")
-        
-        conn.close()
-    
-    with tab4:
-        st.header("💰 거래 내역")
-        
-        conn = get_db()
-        c = conn.cursor()
-        
-        c.execute("""
-            SELECT t.id, t.buyer_id, i.name, t.price, t.created_at
-            FROM transactions t
-            JOIN items i ON t.item_id = i.id
-            ORDER BY t.created_at DESC
-            LIMIT 50
-        """)
-        
-        transactions = c.fetchall()
-        
-        if transactions:
-            st.dataframe(
-                [[t[0], t[1], t[2], t[3], t[4]] for t in transactions],
-                columns=["ID", "구매자", "아이템", "가격", "거래일"],
-                use_container_width=True
-            )
-        else:
-            st.info("거래 내역이 없습니다.")
-        
-        conn.close()
 
 # ==========================================
 # 서버 실행
@@ -987,4 +919,5 @@ if __name__ == "__main__":
             if FASTAPI_AVAILABLE and app:
                 print("🚀 FastAPI 서버도 자동으로 시작됩니다: http://localhost:8000")
         streamlit_app()
+
 
