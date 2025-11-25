@@ -397,55 +397,124 @@ def streamlit_app():
         initial_sidebar_state="expanded"
     )
     
-    # CSS 스타일 (인스타그램 + 깃허브 느낌)
+    # 마인크래프트 조형물 스타일 CSS
     st.markdown("""
     <style>
     .main {
-        padding-top: 2rem;
+        padding-top: 1rem;
+        background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
     }
+    
+    /* 마인크래프트 3D 블럭 조형물 */
+    .minecraft-sculpture {
+        width: 140px;
+        height: 140px;
+        position: relative;
+        transform-style: preserve-3d;
+        transform: rotateX(-20deg) rotateY(25deg);
+        margin: 0 auto;
+    }
+    
+    .minecraft-block {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        transform-style: preserve-3d;
+    }
+    
+    /* 블럭 면들 */
+    .block-face {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        border: 2px solid rgba(0,0,0,0.3);
+        box-sizing: border-box;
+    }
+    
+    /* 앞면 */
+    .block-front {
+        background: var(--block-color);
+        transform: translateZ(20px);
+        box-shadow: inset 0 0 10px rgba(255,255,255,0.3);
+    }
+    
+    /* 윗면 */
+    .block-top {
+        background: var(--block-color-light);
+        transform: rotateX(90deg) translateZ(20px);
+        box-shadow: inset 0 0 10px rgba(255,255,255,0.5);
+    }
+    
+    /* 오른쪽 면 */
+    .block-right {
+        background: var(--block-color-dark);
+        transform: rotateY(90deg) translateZ(20px);
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+    }
+    
+    /* 카드 스타일 */
     .item-card {
-        border: 1px solid #e1e4e8;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1rem;
         background: white;
-        transition: box-shadow 0.2s;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: 2px solid #8B7355;
+        position: relative;
+        overflow: hidden;
     }
+    
+    .item-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #8B7355, #A0826D, #8B7355);
+    }
+    
     .item-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        transition: all 0.3s;
     }
-    .item-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
+    
     .item-title {
         font-size: 1.2rem;
-        font-weight: 600;
-        color: #24292f;
-        margin: 0;
+        font-weight: 700;
+        color: #2C2C2C;
+        margin: 0 0 8px 0;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
     }
-    .item-author {
-        color: #656d76;
-        font-size: 0.9rem;
-        margin-left: 0.5rem;
-    }
+    
     .item-price {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #0969da;
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #FF6F0F;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
     }
-    .item-description {
-        color: #656d76;
-        margin: 0.5rem 0;
-        font-size: 0.9rem;
+    
+    .item-description-box {
+        background: linear-gradient(135deg, #FFF8E7 0%, #FFE5B4 100%);
+        padding: 14px;
+        border-radius: 8px;
+        margin-top: 12px;
+        border-left: 5px solid #FF6F0F;
+        border-top: 2px solid #FFD700;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
     }
-    .item-stats {
-        display: flex;
-        gap: 1rem;
-        color: #656d76;
-        font-size: 0.85rem;
-        margin-top: 0.5rem;
+    
+    .stButton>button {
+        border-radius: 8px;
+        font-weight: 700;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        border: 2px solid rgba(0,0,0,0.1);
+    }
+    
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -609,6 +678,115 @@ def streamlit_app():
         return items
     
     # 아이템 카드 표시 함수
+        # 마인크래프트 조형물 스타일 카드
+    def show_minecraft_card(item, show_buy=True):
+        """마인크래프트 조형물 스타일 카드"""
+        
+        # 샘플 아이템 체크
+        is_sample = item.get('id', 0) >= 900
+        
+        # 블럭 색상 선택 (마인크래프트 블럭 색상)
+        block_colors = [
+            {"main": "#DC143C", "light": "#FF6B6B", "dark": "#8B0000"},  # 빨강
+            {"main": "#FF8C00", "light": "#FFB84D", "dark": "#CC6600"},  # 주황
+            {"main": "#FFD700", "light": "#FFE44D", "dark": "#CCAA00"},  # 노랑
+            {"main": "#32CD32", "light": "#7FFF00", "dark": "#228B22"},  # 초록
+            {"main": "#1E90FF", "light": "#5AAFFF", "dark": "#0066CC"},  # 파랑
+            {"main": "#9370DB", "light": "#BA9AFF", "dark": "#6A4C93"},  # 보라
+            {"main": "#FF69B4", "light": "#FF9FCF", "dark": "#CC4A8F"},  # 분홍
+        ]
+        color_set = block_colors[item.get('id', 0) % len(block_colors)]
+        
+        # 마인크래프트 블럭 조형물 HTML 생성
+        sculpture_html = f"""
+        <div class="minecraft-sculpture">
+            <!-- 블럭 1 (기본) -->
+            <div class="minecraft-block" style="left: 0px; top: 0px;">
+                <div class="block-face block-front" style="--block-color: {color_set['main']}; --block-color-light: {color_set['light']}; --block-color-dark: {color_set['dark']};"></div>
+                <div class="block-face block-top" style="--block-color: {color_set['main']}; --block-color-light: {color_set['light']}; --block-color-dark: {color_set['dark']};"></div>
+                <div class="block-face block-right" style="--block-color: {color_set['main']}; --block-color-light: {color_set['light']}; --block-color-dark: {color_set['dark']};"></div>
+            </div>
+            <!-- 블럭 2 (위에 쌓기) -->
+            <div class="minecraft-block" style="left: 0px; top: -40px;">
+                <div class="block-face block-front" style="--block-color: {color_set['main']}; --block-color-light: {color_set['light']}; --block-color-dark: {color_set['dark']};"></div>
+                <div class="block-face block-top" style="--block-color: {color_set['main']}; --block-color-light: {color_set['light']}; --block-color-dark: {color_set['dark']};"></div>
+                <div class="block-face block-right" style="--block-color: {color_set['main']}; --block-color-light: {color_set['light']}; --block-color-dark: {color_set['dark']};"></div>
+            </div>
+            <!-- 블럭 3 (옆에 배치) -->
+            <div class="minecraft-block" style="left: 40px; top: 0px;">
+                <div class="block-face block-front" style="--block-color: {color_set['dark']}; --block-color-light: {color_set['main']}; --block-color-dark: {color_set['dark']};"></div>
+                <div class="block-face block-top" style="--block-color: {color_set['dark']}; --block-color-light: {color_set['main']}; --block-color-dark: {color_set['dark']};"></div>
+                <div class="block-face block-right" style="--block-color: {color_set['dark']}; --block-color-light: {color_set['main']}; --block-color-dark: {color_set['dark']};"></div>
+            </div>
+            <!-- 블럭 4 (대각선) -->
+            <div class="minecraft-block" style="left: 20px; top: -20px; z-index: 1;">
+                <div class="block-face block-front" style="--block-color: {color_set['light']}; --block-color-light: {color_set['light']}; --block-color-dark: {color_set['main']};"></div>
+                <div class="block-face block-top" style="--block-color: {color_set['light']}; --block-color-light: {color_set['light']}; --block-color-dark: {color_set['main']};"></div>
+                <div class="block-face block-right" style="--block-color: {color_set['light']}; --block-color-light: {color_set['light']}; --block-color-dark: {color_set['main']};"></div>
+            </div>
+        </div>
+        """
+        
+        # 설명 생성
+        desc = item.get('description', '')
+        if not desc:
+            name = item['name']
+            if "로그인" in name or "login" in name.lower():
+                desc = "🔐 자동 로그인 자동화\n\n새올 시스템, 민원 프로그램 등에 자동으로 로그인하는 부품입니다. 반복적인 로그인 작업을 자동화하여 업무 효율을 높입니다."
+            elif "엑셀" in name or "excel" in name.lower() or "복사" in name:
+                desc = "📊 웹페이지에서 엑셀로 복사하기 자동화\n\n웹페이지의 데이터를 자동으로 복사하여 엑셀 파일로 저장하는 부품입니다. 수작업으로 하던 데이터 입력을 자동화합니다."
+            elif "민원" in name or "공무원" in name or "프로그램" in name:
+                desc = "🏛️ 민원/공무원 프로그램 자동화\n\n민원 처리나 공무원 업무 프로그램을 자동으로 실행하고 조작하는 부품입니다. 반복적인 업무 프로세스를 자동화합니다."
+            else:
+                desc = f"⚙️ {item['type']} 자동화 부품\n\n자동화 작업을 수행하는 부품입니다."
+        
+        price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
+        
+        # 카드 HTML
+        card_html = f"""
+        <div class="item-card">
+            <div style="display: flex; gap: 20px; align-items: start;">
+                <div style="flex-shrink: 0; width: 160px;">
+                    {sculpture_html}
+                </div>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div>
+                            <h3 class="item-title">{item['name']}</h3>
+                            <div style="color: #6b7280; font-size: 0.875rem; margin-top: 4px;">
+                                👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="item-price">{price_text}</div>
+                        </div>
+                    </div>
+                    <div class="item-description-box">
+                        <div style="color: #374151; line-height: 1.7; white-space: pre-line; font-size: 0.9375rem;">
+                            {desc}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(card_html, unsafe_allow_html=True)
+        
+        # 구매 버튼
+        if show_buy and not is_sample:
+            col1, col2, col3 = st.columns([3, 1, 1])
+            with col2:
+                if st.session_state.logged_in:
+                    if st.button("💬 구매하기", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
+                        _handle_purchase(item)
+                else:
+                    st.info("💡 로그인 필요")
+        elif is_sample:
+            col1, col2, col3 = st.columns([3, 1, 1])
+            with col2:
+                st.info("📝 샘플 아이템")
+        st.markdown("<br>", unsafe_allow_html=True)
+        
     def show_item_card(item, show_download=True):
         with st.container():
             col1, col2 = st.columns([3, 1])
@@ -919,5 +1097,6 @@ if __name__ == "__main__":
             if FASTAPI_AVAILABLE and app:
                 print("🚀 FastAPI 서버도 자동으로 시작됩니다: http://localhost:8000")
         streamlit_app()
+
 
 
