@@ -443,6 +443,7 @@ def streamlit_app():
         border-left: 4px solid #FF6F0F;
         color: #374151;
         line-height: 1.7;
+        white-space: pre-line;
     }
     
     /* 마인크래프트 조형물 */
@@ -510,7 +511,7 @@ def streamlit_app():
     
     # 사이드바 (로그인/회원가입)
     with st.sidebar:
-        st.title("🛒 마켓플레이스")
+        st.markdown("### 🏛️ 충주시 마켓플레이스")
         
         if st.session_state.logged_in:
             st.success(f"✅ {st.session_state.user_id}님")
@@ -626,8 +627,8 @@ def streamlit_app():
                         except Exception as e:
                             st.error(f"회원가입 실패: {e}")
     
-    # 메인 페이지 - 마켓플레이스 (인스타그램 + 깃허브 스타일)
-    st.title("🛒 마켓플레이스")
+    # 메인 페이지 - 마켓플레이스
+    st.markdown("## 🏛️ 충주시 자동화 부품 마켓플레이스")
     
     # 탭: 마켓플레이스, 판매하기, 내 상점
     tab_market, tab_sell, tab_my_shop = st.tabs(["🏪 마켓플레이스", "📤 판매하기", "🛍️ 내 상점"])
@@ -742,7 +743,7 @@ def streamlit_app():
         except Exception as e:
             st.error(f"구매 실패: {e}")
     
-    # 당근마켓 스타일 카드
+    # 당근마켓 스타일 카드 (Streamlit 네이티브 방식)
     def show_item_card(item, show_download=True):
         is_sample = item.get('id', 0) >= 900
         sculpture_html, sculpture_name = create_heritage_sculpture(item.get('id', 0))
@@ -761,49 +762,40 @@ def streamlit_app():
         
         price_text = f"{item['price']:,}P" if item['price'] > 0 else "🆓 무료"
         
-        card_html = f"""
-        <div class="daangn-card">
-            <div style="display: flex; gap: 20px; align-items: start;">
-                <div style="flex-shrink: 0; width: 180px; text-align: center;">
-                    {sculpture_html}
-                    <div style="margin-top: 8px; font-size: 0.85rem; color: #6b7280; font-weight: 600;">
-                        🏛️ {sculpture_name}
-                    </div>
-                </div>
-                <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                        <div>
-                            <h3 class="daangn-title">{item['name']}</h3>
-                            <div style="color: #6b7280; font-size: 0.9rem; margin-top: 4px;">
-                                👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div class="daangn-price">{price_text}</div>
-                        </div>
-                    </div>
-                    <div class="daangn-desc">
-                        {desc}
-                    </div>
-                </div>
-            </div>
-        </div>
-        """
-        st.markdown(card_html, unsafe_allow_html=True)
+        # 당근마켓 스타일 카드 (Streamlit 네이티브)
+        with st.container():
+            # 조형물과 정보를 나란히 배치
+            col_left, col_right = st.columns([200, 1])
+            
+            with col_left:
+                # 조형물 표시
+                st.markdown(f'<div style="text-align: center; margin-bottom: 10px;">{sculpture_html}</div>', unsafe_allow_html=True)
+                st.caption(f"🏛️ {sculpture_name}")
+            
+            with col_right:
+                # 제목과 가격
+                col_title, col_price = st.columns([3, 1])
+                with col_title:
+                    st.markdown(f"### {item['name']}")
+                    st.caption(f"👤 {item['author']} • 📅 {item['created_at'][:10]} • ⬇️ {item['download_count']}명 구매")
+                with col_price:
+                    st.markdown(f"## {price_text}")
+                
+                # 설명
+                with st.expander("📝 상세 설명", expanded=True):
+                    st.markdown(desc)
+                
+                # 구매 버튼
+                if show_download and not is_sample:
+                    if st.session_state.logged_in:
+                        if st.button("💬 구매하기", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
+                            _handle_purchase(item)
+                    else:
+                        st.info("💡 로그인 필요")
+                elif is_sample:
+                    st.info("📝 샘플 아이템")
         
-        if show_download and not is_sample:
-            col1, col2, col3 = st.columns([3, 1, 1])
-            with col2:
-                if st.session_state.logged_in:
-                    if st.button("💬 구매하기", key=f"buy_{item['id']}", use_container_width=True, type="primary"):
-                        _handle_purchase(item)
-                else:
-                    st.info("💡 로그인 필요")
-        elif is_sample:
-            col1, col2, col3 = st.columns([3, 1, 1])
-            with col2:
-                st.info("📝 샘플 아이템")
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.divider()
     
     # 마켓플레이스 탭
     with tab_market:
